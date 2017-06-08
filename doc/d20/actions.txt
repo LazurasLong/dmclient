@@ -1,0 +1,66 @@
+Noted in events.txt, we talk about the following types of action events:
+
+moving
+casting a spell
+use ability
+use skill
+activate item
+attacking
+equip/de-equip item/weapon
+
+This document classifies the actions listed on [1] into the following
+event types, possibly leading to an expansion of the event types in dmclient. A
+star (`*') indicates that this action may be required to have custom
+functionality per the system involved.
+
+Note: attacks of opportunity can be embedded in the general Action object for
+d20. The ability type can be embedded in that object as well (Ex/Su/Sla)
+
+STANDARD ACTIONS LISTED IN d20		dmclient TRANSLATION
+Attack (melee, unarmed, ranged)		attacking
+Bull rush 				use ability (BullRush*)
+Activate magic item (potion, oil, etc.)	activate item
+Aid another				use ability (AidOther*)
+Cast a spell				casting a spell
+Concentrate to maintain an active spell	???
+Dismiss a spell 			use ability (DismissSpell*)
+Escape a grapple			use ability (EscapeGrapple*)
+Feint					use ability (Feint*)
+Light a torch with a tindertwig 	activate item
+Lower spell resistance			use ability (LowerSR*)
+Overrun					use ability (Overrun*)
+Read a scroll				activate item
+Ready (triggers a standard action) 	use ability (Ready*)
+Sunder (object or item)			use ability (Sunder*)
+Total defense				use ability (TotalDefense*)
+Turn or rebuke undead			use ability (TurnUndead*)
+
+Note: these were listed, but are obviously just `use skill'
+
+Draw a hidden weapon (see Sleight of Hand skill)
+Make a dying friend stable (see Heal skill)
+
+Note: these were listed, but are obviously just functionally handled
+
+Use extraordinary ability		use ability (specific ability)
+Use spell-like ability
+Use supernatural ability
+
+MOVE ACTIONS LISTED IN d20		dmclient TRANSLATION
+Move					moving
+Direct or redirect an active spell
+Draw a weapon				
+Load a hand crossbow or light crossbow
+Open or close a door
+Move a heavy object
+Pick up an item				pick up item
+Sheathe a weapon			equip/de-equip item/weapon
+Stand up from prone			???
+Ready or loose a shield                 equip/de-equip item/weapon
+Retrieve a stored item			equip/de-equip item/weapon
+
+Note: these were listed, but dmclient is not yet considering mounts of any kind
+Mount a horse or dismount		use ability (Mount???)
+Control a frightened mount		use ability (TameMount???)
+
+[1] http://www.d20srd.org/srd/combat/actionsInCombat.htm

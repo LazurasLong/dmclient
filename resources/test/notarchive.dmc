@@ -1,0 +1,4 @@
+This isn't really a tar file, so dmclient should barf on it.
+
+The ``badarchive.dmc'' contains only this file within it. This is a valid tar
+file, but exercises a different class of error: incomplete archive contents.

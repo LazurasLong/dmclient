@@ -1,0 +1,27 @@
+{
+  "name": "Test Map",
+  "description": "It's always Australia for some reason.",
+  "mask": "map_mask.png",
+  "pins": [
+    {
+      "name": "Foo",
+      "location": {"x": 1799.99, "y": 1467.0001}
+    },
+    {
+      "name": "Bar",
+      "location": {"x": 1800.1, "y": 1700}
+    },
+    {
+      "name": "Baz",
+      "location": {"x": 1617.0, "y": 35.2}
+    },
+    {
+      "name": "Barbar",
+      "location": {"x": 300.2, "y": 600.22}
+    },
+    {
+      "name": "TotallyNotPerth",
+      "location": {"x": 380.4, "y": 1200.1}
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+Custom compile Qt5 to reduce deployment size (icudt49.dll is 17MB!!! but
+apparently is only needed for WebKit, which we obviously don't require....)
+
+Clipboard flushing on Windows
+	https://stackoverflow.com/questions/2007103/how-can-i-disable-clear-of-clipboard-on-exit-of-pyqt4-application#2011376
+
+Dying on any exception (thwart Qt): use sys.excepthook
+
+Content menus, etc. on item views: use QItemDelegate
+
+Converting images from Qt <-> PIL
+https://stackoverflow.com/questions/1733096/convert-pyqt-to-pil-image#1756587
+note: likely embarassingly slow, so we need to be careful about this
+
+Overriding closeEvent to allow "Are you sure you want to quit dmclient?"
+	better strategy: just autosave the campaign progress!
+
+Utilise parts of Qt to avoid having to write too much code.
+	-> use QStyledItemDelegate and QItemEditorFactory
+	see: http://www.diusrex.com/2014/09/qt-modelview-editing-tutorial/
+
+	also see, for a discussion on using dialogs:
+		https://stackoverflow.com/questions/22868856/qfiledialog-as-editor-for-tableview-how-to-get-result
+
+Use setInformativeText in dialogs. One way might be to have dialog text be two
+lines: first line is setText. second line is setInformativeText.
+
+Refactor view to have some kind of meta class setup. e.g.
+	class ThingDialog(Meta):
+		"""matches form names... not sure if terrible"""
+		QT_VIEW = QDialog
+		WINDOW_TITLE = Formatted("%s - properties", "name")
+		DESCRIPTIONTEXT = Str("description")
+		CREATIONDATE = Date("creation_date")
+		LASTPLAYED = Str("revision_date")  # FIXME: str???
+		
+Shortcuts are weird.
+	"New Campaign" has ^/⌘n
+	New Encounter from Template has ^/⌘N
+	New Session isn't in File menu
+
+	How often is each action? Yeah...
+
+Userprefs for get_open_* and get_save_filename()
+	keyed dict on filter_
+
+
+Ugh, QLineEdits/etc? don't have their own undo/redo model built-in. So we need
+to hack those in.
+            Interesting question: does this fit with global undo/redo?

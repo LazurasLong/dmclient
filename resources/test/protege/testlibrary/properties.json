@@ -1,0 +1,12 @@
+{
+  "id": "10b2c28d-8192-4db2-b784-791c2bba709c",
+  "game_system_id": "PROTEGE",
+  "name": "PROT\u00e9G\u00e9",
+  "author": "Alex Mair",
+  "creation_date": "2013-12-31",
+  "description": "PROT\u00e9G\u00e9 is a minimalistic tabletop role-playing game. There are only two\nabilities (in contrast to the 6-7 found in most role-playing games),\nten spells,\n\nThere is only one and only die type in PROT\u00e9G\u00e9: the d6. PROT\u00e9G\u00e9 is\ncomputationally intensive, making it ideal for computer-based simulators of\nrole-playing games; indeed PROT\u00e9G\u00e9 definitely fits the role of a \"roll-playing\"\ngame over a \"role-playing\" game.\n\nWhilst PROT\u00e9G\u00e9 is meant to be playable (afterall, it would be rather pointless\nto simulate if it weren't), it is certainly not tested in any real\nsense. It is mostly a proof of concept for dmclient to test a variety of\nfeatures. Thus you may want to actually play PROT\u00e9G\u00e9 if you allow dmclient to\nsimulate its features.\n",
+  "license": "GNU Free Documentation License",
+  "license_text": "TODO: License text",
+  "revision": 1,
+  "revision_date": "2017-03-12"
+}

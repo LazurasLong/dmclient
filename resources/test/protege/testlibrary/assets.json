@@ -1,0 +1,27 @@
+{
+    "Abilities": {
+        "395f24c6-4807-4a63-a02a-b7c39fb59930": {
+            "description": "Strength is one of two abilities in PROT\u00e9G\u00e9. It represents a character's physical attributes such as raw power, toughness, and agility. Strength determines how often a character can attack, how much damage they deal, and the likeliness of striking a hit. Strength affects how much damage a character can take before falling unconscious.",
+            "name": "Strength",
+            "min": 1
+        },
+        "f9d08adf-4d15-4644-adaa-b607d77c3af1": {
+            "description": "Intelligence is the second ability in PROT\u00e9G\u00e9. It determines a wide variety of mental characteristics such as spatial reasoning, critical thinking abilities, memory, and learning capacity. Intelligence governs how many skill points a character has, the maximum level of spell a character can learn, the effectiveness of character spells, how much mana a character has, and how many spells per day the character can cast.",
+            "name": "Intelligence"
+        }
+    },
+    "Skills": {
+        "70912de6-57b4-47c5-8c00-448aa0a9bcc1": {
+            "description": "Stealth helps you hide from other characters, meaning they cannot target you.",
+            "name": "Stealth"
+        },
+        "acd7980d-316b-4309-8074-0afa77062fe6": {
+            "description": "Perception lets you see and hear things.",
+            "name": "Perception"
+        },
+        "def80905-624e-4ddf-93c8-139c38acc67a": {
+            "description": "Doing stuff.",
+            "name": "Acrobatics"
+        }
+    }
+}

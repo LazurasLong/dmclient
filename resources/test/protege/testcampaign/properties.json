@@ -1,0 +1,9 @@
+{
+	"id": "18b31a1f-1fa2-4087-90ac-430ee8c5c4f2",
+	"name": "PROTéGé Test Campaign",
+	"author": "Alex Mair",
+	"game_system_id": "PROTEGE",
+	"creation_date": "2016-04-20",
+	"revision_date": "2016-04-21",
+	"description": "This is a test campaign for PROTéGé, whose main purpose is to ensure that dmclient has decent unit tests."
+}

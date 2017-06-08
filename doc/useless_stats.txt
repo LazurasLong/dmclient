@@ -1,0 +1,8 @@
+Maybe have useless stats like so:
+
+total # monsters killed in this campaign
+experience awarded
+players
+player deaths
+
+etc. amusing aggregate scores.

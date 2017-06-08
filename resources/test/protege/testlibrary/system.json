@@ -1,0 +1,29 @@
+{
+    "Actions": {
+        "Free action": {
+            "cost": 0,
+            "limit": 2
+        },
+        "Full-round action": {
+            "cost": 1.0
+        },
+        "Half-action": {
+            "cost": 0.5
+        }
+    },
+    "Dice": [
+        "d6"
+    ],
+    "Grid properties": {
+        "scale": 1,
+        "scale unit": [
+            "metre",
+            "m"
+        ],
+        "type": "square"
+    },
+    "Temporal scale": [
+        6,
+        "seconds"
+    ]
+}

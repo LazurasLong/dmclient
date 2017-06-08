@@ -1,0 +1,3 @@
+One of dmclient's tools should be a character builder.
+
+Have two "modes": the characters presumed progression and the "real stats" based on a GUI widget slider that allows one to see progression 

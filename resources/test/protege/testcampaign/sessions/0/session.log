@@ -1,0 +1,3 @@
+This is what happened in the session!
+Maybe one day this will be more than just a blatant log of events that dmclient
+registers... Probably with Python's logger interface.

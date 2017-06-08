@@ -1,0 +1,541 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>800</width>
+    <height>600</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>&lt;&lt;do not localise&gt;&gt;</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="../../icons.qrc">
+    <normaloff>:/icons/logo.png</normaloff>:/icons/logo.png</iconset>
+  </property>
+  <property name="dockOptions">
+   <set>QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks</set>
+  </property>
+  <widget class="QWidget" name="mainLayout">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <property name="tabsClosable">
+       <bool>true</bool>
+      </property>
+      <widget class="QWidget" name="tab">
+       <attribute name="title">
+        <string>Overview</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_2"/>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>27</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="new_campaign"/>
+    <addaction name="open_campaign"/>
+    <addaction name="recent"/>
+    <addaction name="separator"/>
+    <addaction name="save_campaign"/>
+    <addaction name="save_campaign_as"/>
+    <addaction name="separator"/>
+    <addaction name="close_campaign"/>
+    <addaction name="separator"/>
+    <addaction name="import_rules"/>
+    <addaction name="separator"/>
+    <addaction name="quit"/>
+   </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="undo"/>
+    <addaction name="redo"/>
+    <addaction name="separator"/>
+    <addaction name="actionCut"/>
+    <addaction name="actionCopy"/>
+    <addaction name="actionPaste"/>
+    <addaction name="actionDelete"/>
+    <addaction name="actionSelect_All"/>
+    <addaction name="separator"/>
+    <addaction name="actionFind"/>
+    <addaction name="separator"/>
+    <addaction name="edit_preferences"/>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="showhide_toolbar"/>
+    <addaction name="separator"/>
+    <addaction name="showhide_assettree"/>
+    <addaction name="showhide_vbm_window"/>
+    <addaction name="separator"/>
+    <addaction name="showhide_fullscreen"/>
+   </widget>
+   <widget class="QMenu" name="menuCampaign">
+    <property name="title">
+     <string>Campaign</string>
+    </property>
+    <addaction name="new_session"/>
+    <addaction name="separator"/>
+    <addaction name="new_character"/>
+    <addaction name="new_encounter_template"/>
+    <addaction name="separator"/>
+    <addaction name="campaign_properties"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="help"/>
+    <addaction name="separator"/>
+    <addaction name="complain"/>
+    <addaction name="check_for_updates"/>
+    <addaction name="digitalbusking"/>
+    <addaction name="separator"/>
+    <addaction name="about"/>
+   </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="roller"/>
+    <addaction name="actionNPC_Generator"/>
+    <addaction name="rewards"/>
+   </widget>
+   <widget class="QMenu" name="menuSession">
+    <property name="title">
+     <string>Session</string>
+    </property>
+    <widget class="QMenu" name="menuAdd_note">
+     <property name="title">
+      <string>Add Note</string>
+     </property>
+     <addaction name="new_note"/>
+     <addaction name="add_existing_note"/>
+    </widget>
+    <addaction name="new_encounter"/>
+    <addaction name="new_encounter_from_template"/>
+    <addaction name="separator"/>
+    <addaction name="menuAdd_note"/>
+   </widget>
+   <widget class="QMenu" name="menuMap">
+    <property name="title">
+     <string>Map</string>
+    </property>
+    <addaction name="export_map_to_json"/>
+    <addaction name="separator"/>
+    <addaction name="edit_map_layers"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
+   <addaction name="menuView"/>
+   <addaction name="menuCampaign"/>
+   <addaction name="menuSession"/>
+   <addaction name="menuMap"/>
+   <addaction name="menuTools"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QToolBar" name="toolBar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <property name="movable">
+    <bool>false</bool>
+   </property>
+   <property name="floatable">
+    <bool>false</bool>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="showhide_inspector"/>
+  </widget>
+  <action name="new_campaign">
+   <property name="text">
+    <string>New Campaign...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="open_campaign">
+   <property name="text">
+    <string>Open Campaign...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="recent">
+   <property name="text">
+    <string>Recent Campaigns</string>
+   </property>
+  </action>
+  <action name="save_campaign">
+   <property name="text">
+    <string>Save Campaign</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="save_campaign_as">
+   <property name="text">
+    <string>Save Campaign As...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+S</string>
+   </property>
+  </action>
+  <action name="close_campaign">
+   <property name="text">
+    <string>Close Campaign</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+W</string>
+   </property>
+  </action>
+  <action name="quit">
+   <property name="text">
+    <string>Quit dmclient</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="undo">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Undo</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Z</string>
+   </property>
+  </action>
+  <action name="redo">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Redo</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+Z</string>
+   </property>
+  </action>
+  <action name="actionCut">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Cut</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+X</string>
+   </property>
+  </action>
+  <action name="actionCopy">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Copy</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+C</string>
+   </property>
+  </action>
+  <action name="actionPaste">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Paste</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+V</string>
+   </property>
+  </action>
+  <action name="actionDelete">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Delete</string>
+   </property>
+   <property name="shortcut">
+    <string>Del, Backspace</string>
+   </property>
+  </action>
+  <action name="actionSelect_All">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Select All</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+A</string>
+   </property>
+  </action>
+  <action name="edit_preferences">
+   <property name="text">
+    <string>Preferences...</string>
+   </property>
+  </action>
+  <action name="help">
+   <property name="text">
+    <string>dmclient Help</string>
+   </property>
+   <property name="shortcut">
+    <string>F1</string>
+   </property>
+  </action>
+  <action name="complain">
+   <property name="text">
+    <string>Report a bug...</string>
+   </property>
+  </action>
+  <action name="digitalbusking">
+   <property name="text">
+    <string>Donate...</string>
+   </property>
+  </action>
+  <action name="about">
+   <property name="text">
+    <string>About dmclient</string>
+   </property>
+  </action>
+  <action name="showhide_fullscreen">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Fullscreen</string>
+   </property>
+   <property name="shortcut">
+    <string>F11</string>
+   </property>
+  </action>
+  <action name="showhide_vbm_window">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Detached VBM Window</string>
+   </property>
+  </action>
+  <action name="showhide_toolbar">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toolbar</string>
+   </property>
+  </action>
+  <action name="new_encounter_template">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>New Encounter Template...</string>
+   </property>
+  </action>
+  <action name="new_character">
+   <property name="text">
+    <string>New Character...</string>
+   </property>
+  </action>
+  <action name="import_rules">
+   <property name="text">
+    <string>Import rules...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+E</string>
+   </property>
+  </action>
+  <action name="actionFind">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Find...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+F</string>
+   </property>
+  </action>
+  <action name="showhide_assettree">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Asset Tree</string>
+   </property>
+  </action>
+  <action name="campaign_properties">
+   <property name="text">
+    <string>Properties...</string>
+   </property>
+  </action>
+  <action name="roller">
+   <property name="text">
+    <string>Dice Roller</string>
+   </property>
+  </action>
+  <action name="rewards">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Reward Calculator</string>
+   </property>
+  </action>
+  <action name="actionCheck_for_updates">
+   <property name="text">
+    <string>Check for updates...</string>
+   </property>
+  </action>
+  <action name="check_for_updates">
+   <property name="text">
+    <string>Check for updates...</string>
+   </property>
+  </action>
+  <action name="new_session">
+   <property name="text">
+    <string>Start New Session...</string>
+   </property>
+  </action>
+  <action name="new_encounter">
+   <property name="text">
+    <string>New Encounter</string>
+   </property>
+  </action>
+  <action name="new_encounter_from_template">
+   <property name="text">
+    <string>New Encounter from Template...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+N</string>
+   </property>
+  </action>
+  <action name="add_existing_note">
+   <property name="text">
+    <string>Existing file...</string>
+   </property>
+  </action>
+  <action name="new_note">
+   <property name="text">
+    <string>New Plain Text file</string>
+   </property>
+  </action>
+  <action name="debughook">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../../icons.qrc">
+     <normaloff>:/icons/edit.png</normaloff>:/icons/edit.png</iconset>
+   </property>
+   <property name="text">
+    <string>DEBUGHOOK</string>
+   </property>
+   <property name="toolTip">
+    <string>You should not see this...</string>
+   </property>
+  </action>
+  <action name="showhide_inspector">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset theme="view-refresh">
+     <normaloff>../../../../../.designer/backup</normaloff>../../../../../.designer/backup</iconset>
+   </property>
+   <property name="text">
+    <string>Show Map Inspector</string>
+   </property>
+   <property name="toolTip">
+    <string>Show Map Inspector</string>
+   </property>
+  </action>
+  <action name="edit_map_layers">
+   <property name="text">
+    <string>Manage layers...</string>
+   </property>
+  </action>
+  <action name="actionNPC_Generator">
+   <property name="text">
+    <string>NPC Generator</string>
+   </property>
+  </action>
+  <action name="export_map_to_json">
+   <property name="text">
+    <string>Export to JSON...</string>
+   </property>
+  </action>
+ </widget>
+ <resources>
+  <include location="../../icons.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>showhide_toolbar</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>toolBar</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>319</x>
+     <y>31</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
