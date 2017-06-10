@@ -35,6 +35,7 @@ class Campaign:
         self.revision_date = revision_date
         self.players = {}
         self.sessions = []
+        self.documents = []
         self.encounters = []
         self.regional_maps = {}
         self.encounter_maps = {}
@@ -54,3 +55,14 @@ class CampaignSession:
 
     def __str__(self):
         return str(self.start_time)
+
+
+class Note:
+    def __init__(self, id):
+        self.id = id
+
+
+class ExternalNote(Note):
+    def __init__(self, id, url):
+        super().__init__(id)
+        self.url = url

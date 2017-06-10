@@ -66,3 +66,8 @@ class XYCoordSchema(Schema):
     @post_load
     def make_coord(self, data):
         return data["x"], data["y"]
+
+
+class NoteSchema(Schema):
+    id = fields.UUID(required=True)
+    url = fields.String(required=True)

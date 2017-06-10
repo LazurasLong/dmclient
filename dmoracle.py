@@ -26,6 +26,7 @@ from oracle import spawn_oracle
 def main():
     class OracleArgs:
         logfile = os.path.join(CONFIG_PATH, "dmoracle.log")
+        loggers = []
     init_logging(OracleArgs)
 
     delphi = spawn_oracle(None)

@@ -17,10 +17,10 @@
 
 from logging import getLogger
 
-from PyQt5.QtCore import QTimer, pyqtSlot
+from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QIcon
 
-from model.tree import Node, DictNode, ListNode, NodeFactory, TreeModel
+from model.tree import DictNode, ListNode, Node, NodeFactory, TreeModel
 from ui.battlemap.controls import ControlScheme
 from ui.battlemap.widgets import RegionalMapView
 from ui.campaign import CampaignWindow
@@ -29,15 +29,20 @@ log = getLogger(__name__)
 
 
 class SearchController:
-    def __init__(self, delphi, interval_msec=250):
-        delphi.search_callback = self.search_results_updated
+    def __init__(self, delphi, lineedit, results_popup, interval_msec=250):
         self._delphi = delphi
         self._update_delay = interval_msec
         self.search_query = ""
+        self.lineedit = lineedit
+        self.results_popup = results_popup
         self._timer = QTimer()
         self._timer.setInterval(interval_msec)
         self._timer.setSingleShot(True)
         self._timer.timeout.connect(self.search_requested)
+
+    def assign_widgets(self, lineedit, results_popup):
+        self.lineedit = lineedit
+        self.results_popup = results_popup
 
     @property
     def update_delay(self):
@@ -47,6 +52,39 @@ class SearchController:
     def update_delay(self, delay):
         self._update_delay = delay
         self._timer.setInterval(delay)
+
+    @property
+    def results_visible(self):
+        return self.results_popup.visible()
+
+    @results_visible.setter
+    def results_visible(self, visible):
+        if visible:
+            self.update_results_popup()
+            self.results_popup.show()
+        else:
+            self.results_popup.hide()
+
+    def parent_moved(self):
+        self.update_results_popup()
+
+    def parent_resized(self):
+        self.update_results_popup()
+
+    def set_blurb_visible(self, visible=True):
+        if visible:
+            self.results_popup.indexing_blurb.show()
+        else:
+            self.results_popup.indexing_blurb.hide()
+
+    def update_results_popup(self):
+        geo = self.lineedit.geometry()
+        parent = self.lineedit.parentWidget()
+        geo.moveTopLeft(parent.mapToGlobal(geo.topLeft()))
+        geo.setY(geo.y() + geo.height())
+        self.results_popup.setGeometry(geo)
+        self.results_popup.show()
+        self.results_popup.raise_()
 
     def search_text_changed(self, text):
         log.debug("search text changed: {}".format(text))
@@ -71,8 +109,18 @@ class CampaignController:
     def __init__(self, campaign, delphi):
         self.campaign = campaign
         self.delphi = delphi
-        self.search_controller = SearchController(delphi)
-        self.view = None
+        self.search_controller = None
+        v = self.view = CampaignWindow(self.campaign)
+
+        asset_tree = self.build_asset_tree(self.campaign)
+        model = TreeModel(asset_tree)
+
+        v.assetTree.setModel(model)
+        v.assetTree.doubleClicked.connect(model.actionTriggered)
+
+        sc = self.search_controller = SearchController(self.delphi)
+        v.searchEdit.textChanged.connect(sc.search_text_changed)
+        v.searchEdit.returnPressed.connect(sc.search_requested)
 
     def show_map(self, id):
         log.debug("show_map(%s)", id)
@@ -86,22 +134,6 @@ class CampaignController:
 
     def show_session(self):
         raise NotImplementedError
-
-    def spawn_view(self, parent=None):
-        v = self.view = CampaignWindow(self.campaign)
-
-        # FIXME this should not be here.
-        asset_tree = self.build_asset_tree(self.campaign)
-        model = TreeModel(asset_tree)
-
-        v.assetTree.setModel(model)
-        v.assetTree.doubleClicked.connect(model.actionTriggered)
-
-        sc = self.search_controller
-        v.searchEdit.textChanged.connect(sc.search_text_changed)
-        v.searchEdit.returnPressed.connect(sc.search_requested)
-
-        return v
 
     def build_asset_tree(self, campaign):
         """
@@ -133,3 +165,7 @@ class CampaignController:
         root = Node()
         root.add_children([map_node, session_node, player_node, search_node])
         return root
+
+    def window_moved(self):
+        """Called when the main campaign window is moved."""
+        self.search_controller.update_results_popup()

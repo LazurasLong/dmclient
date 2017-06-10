@@ -1,5 +1,14 @@
-{
-  "cad2ea48-b609-4ba2-9e04-119987c8cd4c": "@/note0.txt",
-  "adc94d6d-0ade-445f-881d-fd12780f7f7a": "@/note1.txt",
-  "0b892688-800a-4baa-97de-55bc2ff83f2e": "/tmp/test_note.txt"
-}
+[
+  {
+    "id": "cad2ea48-b609-4ba2-9e04-119987c8cd4c",
+    "url": "@/note0.txt"
+  },
+  {
+    "id": "adc94d6d-0ade-445f-881d-fd12780f7f7a",
+    "url": "@/note1.txt"
+  },
+  {
+    "id": "0b892688-800a-4baa-97de-55bc2ff83f2e",
+    "name": "/tmp/test_note.txt"
+  }
+]

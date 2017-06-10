@@ -15,18 +15,17 @@
 # along with dmclient.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from logging import getLogger
 import io
 import os.path
 import pathlib
 import tarfile
+from logging import getLogger
 from uuid import UUID
 
 from PyQt5.QtGui import QPixmap
 
-from campaign import battlemap, Campaign, CampaignSession
-from campaign.battlemap import MapError, MapSchema, Map, MapPalette, \
-    default_palette_spec
+from campaign import Campaign, CampaignSession
+from campaign.battlemap import Map, MapPalette, MapSchema, default_palette_spec
 from model.schema import *
 
 __all__ = ["load_campaign", "InvalidArchiveError", "InvalidSessionError"]
@@ -71,6 +70,9 @@ def _make_campaign(archive):
     properties = _parse_json(archive.textfile("properties.json"),
                              CampaignPropertiesSchema)
     campaign = Campaign(**properties)
+
+    loader = NoteLoader()
+    campaign.notes = loader.load(archive)
 
     for sessiondir in archive.subdir("sessions").dirs():
         try:
@@ -213,6 +215,15 @@ def _make_maps(mapdir):
         except (InvalidMapError, ValueError) as e:
             log.error("cannot load map: %s", e)
     return maps
+
+
+class NoteLoader:
+    def load(self, archive):
+        """Return a list of notes."""
+        schema = NoteSchema()
+        notes = _parse_json(archive.textfile("notes.json"), schema)
+        for note in notes:
+            id, url,
 
 
 class FileIOWrapper:

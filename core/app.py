@@ -140,7 +140,7 @@ class AppController:
 
     def on_campaign_loaded(self, campaign):
         controller = CampaignController(campaign, self.delphi)
-        window = controller.spawn_view()
+        window = controller.view
         window.show()
         window.raise_()
         window.quit.triggered.connect(self.qapp.quit)

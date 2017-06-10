@@ -14,8 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with dmclient.  If not, see <http://www.gnu.org/licenses/>.
 #
-
+from PyQt5.QtCore import QSize
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QPainter
 from PyQt5.QtWidgets import QMessageBox, QFileDialog
+from PyQt5.QtWidgets import QSizePolicy
 from PyQt5.QtWidgets import QWidget
 
 from core import filters
@@ -47,7 +51,18 @@ def get_save_filename(parent, title, filter_=filters.any, dir_=APP_PATH):
     return QFileDialog.getSaveFileName(parent, title, dir_, filter_)[0]
 
 
-def get_polar_response(parent, msg, affirmative, title="Question", dissenting="Cancel"):
+def spacer_widget(parent=None):
+    """
+
+    :return:  A QWidget suitable as a "spacer" in toolbars and the like.
+    """
+    widget = QWidget(parent)
+    widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+    return widget
+
+
+def get_polar_response(parent, msg, affirmative, title="Question",
+                       dissenting="Cancel"):
     assert affirmative != "", "Affirmative text must always be explicitly specified!"
     msgbox = QMessageBox(parent)
     msgbox.setWindowTitle(title)

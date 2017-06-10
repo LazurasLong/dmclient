@@ -23,6 +23,7 @@ to the oracle, you must first travel to Delphi  :)
     multiple connections to the oracle? Implement that one-to-many mapping.
 
 """
+
 import threading
 from itertools import product
 from logging import getLogger
@@ -72,7 +73,6 @@ class DummyDelphi:
 
     def __init__(self):
         self.search_callback = None
-        pass
 
     def send_search_query(self, query):
         if not self.search_callback:
