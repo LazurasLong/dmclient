@@ -31,7 +31,6 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import *
 
-from ui.test import qtest_main
 from ui.widgets.results import Ui_ResultsDialog
 from ui.widgets.roller import Ui_RollerControls
 
@@ -142,12 +141,3 @@ class DiceController(QObject):
             self.newResult.emit("{} = {}".format(text, roll(text + "+0")))
         except pyparsing.ParseException:  # Ugh, trash dice api.
             self.syntaxError.emit()
-
-
-if __name__ == '__main__':
-    def testmain(_):
-        controller = DiceController()
-        roller = DiceRollerDialog(controller)
-        roller.show()
-        roller.raise_()
-    qtest_main(testmain)
