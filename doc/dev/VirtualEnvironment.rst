@@ -1,9 +1,11 @@
 dmclient's Virtual environment
 ==============================
 
-Using a Python virtual environment is the easiest way to start hacking on dmclient.
+Using a Python virtual environment is the easiest way to start hacking on
+dmclient.
 
-To create a new virtual environment, run the following bash script from within a dmclient checkout::
+To create a new virtual environment, run the following bash script from within
+a dmclient checkout::
 
     #!/bin/bash
     [ ! -e "dmclient.py" ] && {
@@ -11,9 +13,9 @@ To create a new virtual environment, run the following bash script from within a
         exit 1
     }
 
-    DMC_VENV_DIR="${DMC_VENV_DIR:=../dmclient-venv}"
+    DMC_VENV_DIR="${DMC_VENV_DIR:=../dmclient-venv3.6}"
 
-    virtualenv -p python3.6 --prompt='(dmc)' "${DMC_VENV_DIR}"
+    virtualenv -p python3.6 --prompt='(dmc3.6)' "${DMC_VENV_DIR}"
     source "${DMC_VENV_DIR}/bin/activate"
     pip3.6 install -r requirements.txt
 

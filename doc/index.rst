@@ -1,28 +1,20 @@
 Welcome to dmclient!
 ====================
 
-This document details at a high-level the structure of dmclient's documentation,
-which is intended to get you hacking on the source base as quickly as possible.
-
+This is still largely under construction, but this is intended to be the
+user-facing documentation for dmclient.
 
 In-tree and Wiki all as one
 ===========================
 
-This part of the source tree is mirrored at the publicly available Wiki page [1]_.
+It is my hope that dmclient's documentation can be synced up with a
+publicly-facing wiki powered by `MoinMoin https://moinmo.in/`_, but there are
+several problems with this that need to be addressed first...
 
+Topics for developing dmclient
+==============================
 
-Why keep the Wiki in-tree?
-==========================
-
-The primary advantage of this system is that non-programmers can edit the docs
-and keep them up to date without having to learn how to use git or otherwise go
-through the process of having code patches reviewed.
-
-A secondary advantage is that developers can edit the docs in whatever manner
-they please: through the Wiki, their favourite command-line text editor, or
-through their IDE, etc.
-
-
+See :ref:`devel_index`.
 
 
 Contents

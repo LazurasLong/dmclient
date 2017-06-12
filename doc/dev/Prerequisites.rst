@@ -1,3 +1,10 @@
+Build prerequisites
+===================
+
+.. note::
+    This page is out of date. It is kept around because it will be useful
+    in the future, but isn't right now.
+
 To build from source, you will need the following libraries and packages
 available (verion numbers are minimal requirements):
 
