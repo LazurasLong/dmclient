@@ -41,15 +41,16 @@ def excepthook(type_, value, tb):
     print("{}: {}".format(type_.__name__, value), file=sys.stderr, flush=True)
 
 
-def parse_args(argv):
-    class LoggerSpec:
-        def __init__(self, specstr):
-            self.name, level = specstr.split('=')
-            try:
-                self.level = getattr(logging, level.upper())
-            except AttributeError:
-                raise argparse.ArgumentError("invalid logger level `%s'".format(level))
+class LoggerSpec:
+    def __init__(self, specstr):
+        self.name, level = specstr.split('=')
+        try:
+            self.level = getattr(logging, level.upper())
+        except AttributeError:
+            raise argparse.ArgumentError("invalid logger level `%s'".format(level))
 
+
+def parse_args(argv):
     parser = argparse.ArgumentParser(
         prog=APP_NAME,
         description=APP_DESCRIPTION,
