@@ -76,6 +76,9 @@ class DummyDelphi:
         self.enabled = True
         self.documents = []
 
+    def init_database(self, id):
+        pass
+
     def search_query(self, query):
         log.debug("dummy delphi receieved %s", query)
 

@@ -61,13 +61,6 @@ quiet_cmd_pyuic         = PYUIC    $@
 cmd_pyrc                = $(PYRC) $(PYRCFLAGS) -o $@ $<
 quiet_cmd_pyrc          = PYRC     $@
 
-cmd_iconify             =                              \
-	set -e ;                                       \
-	inkscape -w64 -h64 -e $@ $< $(craptools_hack) ;\
-	optipng $@ $(craptools_hack) ;
-quiet_cmd_iconify       = ICONIFY  $<
-
-
 cmd_pkg_archive=                   \
 	set -e ;                   \
 	cd $< ;                    \
@@ -97,15 +90,6 @@ ui_files=$(ui_files_:.ui=.py)
 test_archives=resources/test/protege/testcampaign.dmc \
 	      resources/test/protege/testlibrary.dml
 
-generated_icons = resources/icons/castle.png \
-                  resources/icons/d20.png \
-                  resources/icons/geographic.png \
-                  resources/icons/grid.png \
-                  resources/icons/maps.png \
-                  resources/icons/network.png \
-                  resources/icons/network_more.png \
-                  resources/icons/political.png
-
 
 # Primary targets.
 #
@@ -134,7 +118,7 @@ docs: FORCE
 
 PHONY+=qrc
 qrc: ui/widgets/icons_rc.py
-ui/widgets/icons_rc.py: resources/icons.qrc $(generated_icons)
+ui/widgets/icons_rc.py: resources/icons.qrc
 
 PHONY+=tests
 tests:
@@ -159,7 +143,6 @@ clean-pycache:
 	find . -name __pycache__ | xargs $(RM) -r
 
 clean-resources: clean-testarchives
-	$(RM) $(generated_icons)
 	$(RM) ui/widgets/icons_rc.py
 
 clean-testarchives:
@@ -172,10 +155,6 @@ clean-ui:
 # General targets
 #
 
-resources/icons/%.png: resources/icons/raw/$(notdir %).svg
-	$(call if_dep_changed,iconify)
-	$(call if_dep_changed,optipng)
-
 ui/widgets/%.py: resources/qt/%.ui
 	$(call if_dep_changed,pyuic)
 
@@ -187,7 +166,6 @@ ui/widgets/%_rc.py: resources/%.qrc
 
 # FIXME: cmd?
 ui/widgets/%/:
-	set -e ;             \
 	mkdir $@ ;           \
 	touch $@/__init__.py
 

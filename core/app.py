@@ -43,16 +43,10 @@ class GameSystemManager:
         self.systems.append(game_system)
         self._last_path[game_system.id] = path
 
-    @classmethod
-    def config_file(cls, mode='r'):
-        """Test hook and partial readability."""
-        config_path = os.path.join(core.config.CONFIG_PATH, "gamesystems")
-        return open(config_path, mode)
-
-    def load_config(self):
+    def load_config(self, config_path):
         game_systems = []
         last_seen_at = {}
-        with self.config_file() as config_file:
+        with open(config_path) as config_file:
             reader = game.config.reader(config_file)
             for id, path in reader:
                 try:
@@ -66,8 +60,8 @@ class GameSystemManager:
 
         return game_systems, last_seen_at
 
-    def save_config(self):
-        with self.config_file('w') as config_file:
+    def save_config(self, config_path):
+        with open(config_path, 'w') as config_file:
             writer = game.config.writer(config_file)
             for system in self.systems:
                 path = self._last_path[system.id]
@@ -75,6 +69,8 @@ class GameSystemManager:
 
 
 class AppController:
+    game_config_path = os.path.join(core.config.CONFIG_PATH, "gamesystems")
+
     def __init__(self, qapp, delphi):
         """
 
@@ -87,7 +83,10 @@ class AppController:
         self.new_campaign_dialog = None
         self.campaign_controller = None
         self.games = GameSystemManager()
-        self.games.load_config()
+        try:
+            self.games.load_config(self.game_config_path)
+        except FileNotFoundError:
+            pass
 
     def show_new_campaign(self):
         dlg = self.new_campaign_dialog = NewCampaignDialog(self.games.systems,
@@ -99,7 +98,8 @@ class AppController:
 
     def on_add_gamesystem(self):
         path = get_open_filename(self.new_campaign_dialog,
-                                 "Import game archive", filter_=filters.library)
+                                 "Import game archive", filter_=filters.library,
+                                 recent_key="import_game_archive")
         if not path:
             return
         try:
@@ -147,6 +147,6 @@ class AppController:
 
     def shutdown(self):
         try:
-            self.games.save_config()
+            self.games.save_config(self.game_config_path)
         except OSError as e:
             log.error("failed to save gamesystem config: %s", e)

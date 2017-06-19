@@ -21,7 +21,7 @@
 
 from logging import getLogger
 
-from PyQt5.QtCore import QAbstractItemModel, QModelIndex, QVariant, Qt, pyqtSlot
+from PyQt5.QtCore import QAbstractItemModel, QModelIndex, QVariant, Qt, pyqtSlot, pyqtSignal
 
 from core import hrname
 from model.qt import DMRole
@@ -32,13 +32,15 @@ log = getLogger(__name__)
 
 
 class Node:
-    def __init__(self, action=None, icon=None, text="", parent=None, id=None):
+    def __init__(self, action=None, icon=None, text="", parent=None, id=None,
+                 delegate=None):
         self.action = action
         self.icon = icon
         self.text = text
         self.parent = parent
         self.id = id
         self.children = []
+        self.delegate = delegate
 
     def __len__(self):
         return len(self.children)
@@ -97,8 +99,9 @@ class AttrNode(Node):
 
 
 class ListNode(Node):
-    def __init__(self, action=None, icon=None, text="", child_factory=None):
-        super().__init__(action, icon, text)
+    def __init__(self, action=None, icon=None, text="", child_factory=None,
+                 delegate=None):
+        super().__init__(action, icon, text, delegate=delegate)
         if child_factory is None:
             child_factory = NodeFactory()
         self.child_factory = child_factory

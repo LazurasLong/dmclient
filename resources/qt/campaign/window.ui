@@ -52,7 +52,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>27</height>
+     <height>30</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -69,7 +69,7 @@
     <addaction name="close_campaign"/>
     <addaction name="separator"/>
     <addaction name="import_rules"/>
-    <addaction name="add_note"/>
+    <addaction name="import_document"/>
     <addaction name="separator"/>
     <addaction name="quit"/>
    </widget>
@@ -523,9 +523,35 @@
     <string>Search...</string>
    </property>
   </action>
-  <action name="add_note">
+  <action name="import_document">
+   <property name="icon">
+    <iconset>
+     <normalon>:/icons/books.png</normalon>
+    </iconset>
+   </property>
    <property name="text">
-    <string>Add note...</string>
+    <string>Import document...</string>
+   </property>
+   <property name="toolTip">
+    <string>Copy a document into the campaign archive</string>
+   </property>
+  </action>
+  <action name="add_external_document">
+   <property name="icon">
+    <iconset>
+     <normalon>:/icons/add_external_books.png</normalon>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Add external document...</string>
+   </property>
+   <property name="toolTip">
+    <string>Add a document, but do not copy into the campaign archive.</string>
+   </property>
+  </action>
+  <action name="remove_document">
+   <property name="text">
+    <string>Remove document</string>
    </property>
   </action>
  </widget>

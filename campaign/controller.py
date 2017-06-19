@@ -19,6 +19,7 @@ from logging import getLogger
 
 from PyQt5.QtCore import QObject, QTimer, pyqtSlot
 from PyQt5.QtGui import QIcon, QStandardItem
+from PyQt5.QtWidgets import QAction, QMenu
 
 from core import filters
 from model.tree import DictNode, ListNode, Node, NodeFactory, TreeModel
@@ -130,6 +131,98 @@ class SearchController(QObject):
             model.appendRow(section_item)
 
 
+class NoteController(QObject):
+    def __init__(self, campaign_window):
+        """
+
+        :param campaign_window:  Ugh, because Qt is weird. And all of the
+        QActions are defined there. Some refactoring is probably needed.
+        """
+        super().__init__(campaign_window)
+        self.campaign_window = campaign_window
+        self.tree_node = ListNode(icon=QIcon(":/icons/books.png"),
+                                  text="Documents")
+        campaign_window.import_document.triggered.connect(self.on_import_document)
+        campaign_window.add_external_document.triggered.connect(self.on_add_external_document)
+        campaign_window.remove_document.triggered.connect(self.on_remove_document)
+        # search_node.apply(self.delphi.documents)
+
+    def context_menu(self):
+        window = self.campaign_window
+        return [window.import_document,
+                window.add_external_document,
+                window.remove_document]
+
+    def item_context_menu(self):
+        raise NotImplementedError
+
+    @pyqtSlot()
+    def on_import_document(self):
+        path = get_open_filename(self.view, "Add external document",
+                                 filters.document)
+        if not path:
+            return
+        try:
+            raise NotImplementedError
+        except OSError as e:
+            log.error("could not open note: %s", e)
+
+    @pyqtSlot()
+    def on_add_external_document(self):
+        raise NotImplementedError
+
+    @pyqtSlot()
+    def on_remove_document(self):
+        raise NotImplementedError
+
+
+class MapController:
+    def __init__(self, campaign_window):
+        self.campaign_window = campaign_window
+        map_node_factory = NodeFactory(action=self.show_map)
+
+        region = DictNode(text="Regional", child_factory=map_node_factory)
+        # region.apply(campaign.regional_maps)
+        encounter = DictNode(text="Encounters", child_factory=map_node_factory)
+        # encounter.apply(campaign.encounter_maps)
+
+        self.tree_node = Node(icon=QIcon(":/icons/maps.png"), text="Maps")
+        self.tree_node.add_child(region)
+        self.tree_node.add_child(encounter)
+
+        self.toolbar = None
+
+    def show_map(self, node):
+        id = node.id
+        log.debug("show_map(%s)", id)
+        try:
+            map = self.campaign.regional_maps[id]
+            self.campaign_window.tab_controller.make_tab(map.id, map.name)
+        except KeyError as e:
+            log.error("cannot open map %s: %s", id, e)
+
+    def spawn_view(self):
+        # called by tab controller if need be
+        return RegionalMapView(map, ControlScheme(), self.campaign_window)
+
+
+class PlayerController:
+    def __init__(self, view):
+        self.tree_node = ListNode(text="Players", icon=QIcon(":/icons/party.png"),
+                                  delegate=self)
+
+
+class SessionController:
+    def __init__(self, view):
+        icon = QIcon(":/icons/sessions.png")
+        session_node_factory = NodeFactory(action=self.show_session, icon=icon)
+        self.tree_node = ListNode(icon=icon, text="Sessions",
+                                  child_factory=session_node_factory)
+
+    def show_session(self):
+        pass
+
+
 class CampaignController:
     def __init__(self, campaign, delphi):
         self.campaign = campaign
@@ -138,75 +231,60 @@ class CampaignController:
         # FIXME this does not belong here...
         self.delphi.init_database(campaign.id)
 
-        self.search_controller = None
-        v = self.view = CampaignWindow(self.campaign)
+        self.view = CampaignWindow(self.campaign)
+        # blah blah pycharm
+        self.map_controller = \
+            self.player_controller = \
+            self.session_controller = \
+            self.search_controller = None
+        self._init_subcontrollers(self.view)
 
         asset_tree = self.build_asset_tree(self.campaign)
-        model = TreeModel(asset_tree)
+        model = self.asset_tree_model = TreeModel(asset_tree)
 
-        v.assetTree.setModel(model)
-        v.assetTree.doubleClicked.connect(model.actionTriggered)
+        at = self.view.assetTree
+        at.setModel(model)
+        at.doubleClicked.connect(self.asset_tree_doubleclick)
+        at.customContextMenuRequested.connect(self.asset_tree_context_menu_requested)
 
-        sc = self.search_controller = SearchController(self.delphi,
-                                                       SearchCompleter())
-        v.searchEdit.textChanged.connect(sc.on_search_text_changed)
-        v.searchEdit.returnPressed.connect(sc.on_search_requested)
+    def _init_subcontrollers(self, view):
+        self.map_controller = MapController(view)
+        self.player_controller = PlayerController(view)
+        self.note_controller = NoteController(view)
+        self.session_controller = SessionController(view)
 
-    def show_map(self, id):
-        log.debug("show_map(%s)", id)
-        try:
-            map = self.campaign.regional_maps[id]
-            map_view = RegionalMapView(map, ControlScheme(), self.view)
-            self.view.tab_controller.make_tab(map_view, map.name)
-            self.view.addToolBar(map_view.toolbar)
-        except KeyError as e:
-            log.error("cannot open map %s: %s", id, e)
-
-    def show_session(self):
-        raise NotImplementedError
+        self.search_controller = SearchController(self.delphi,
+                                                  SearchCompleter())
+        sc = self.search_controller  # gross scan/readability, fixme
+        view.searchEdit.textChanged.connect(sc.on_search_text_changed)
+        view.searchEdit.returnPressed.connect(sc.on_search_requested)
 
     def build_asset_tree(self, campaign):
-        """
-
-        :return: A Node for the asset tree.
-        """
-        map_node_factory = NodeFactory(action=self.show_map)
-
-        region = DictNode(text="Regional", child_factory=map_node_factory)
-        region.apply(campaign.regional_maps)
-        encounter = DictNode(text="Encounters", child_factory=map_node_factory)
-        encounter.apply(campaign.encounter_maps)
-
-        map_node = Node(icon=QIcon(":/icons/maps.png"), text="Maps")
-        map_node.add_child(region)
-        map_node.add_child(encounter)
-
-        icon = QIcon(":/icons/sessions.png")
-        session_node_factory = NodeFactory(action=self.show_session, icon=icon)
-        session_node = ListNode(icon=icon, text="Sessions",
-                                child_factory=session_node_factory)
-
-        player_node = ListNode(text="players", icon=QIcon(":/icons/party.png"))
-
-        search_node = ListNode(icon=QIcon(":/icons/books.png"),
-                               text="Documents")
-        search_node.apply(self.delphi.documents)
-
         root = Node()
-        root.add_children([map_node, session_node, player_node, search_node])
+        root.add_children([controller.tree_node
+                           for controller in
+                           [self.map_controller,
+                            self.session_controller,
+                            self.player_controller,
+                            self.note_controller]])
         return root
 
     def window_moved(self):
         """Called when the main campaign window is moved."""
         self.search_controller.update_results_popup()
 
-    @pyqtSlot()
-    def on_add_note(self):
-        path = get_open_filename(self.view, "Add external document",
-                                 filters.document)
-        if not path:
+    def asset_tree_doubleclick(self, index):
+        if not index.isValid():
             return
-        try:
-            self.search_controller
-        except OSError as e:
-            log.error("could not open note: %s", e)
+        node = index.internalPointer()
+        if node.action:
+            node.action(node)  # woo weird!
+
+    def asset_tree_context_menu_requested(self, point):
+        index = self.view.assetTree.indexAt(point)
+        node = index.internalPointer()
+        controller = node.delegate
+        context_menu = QMenu("Asset tree context menu")
+        for action in controller.context_menu():
+            context_menu.addAction(action)
+        context_menu.exec(self.view.mapToGlobal(point))

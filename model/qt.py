@@ -370,12 +370,3 @@ class SchemaTableModel(AbstractQtModel, QAbstractTableModel):
         if index.column() in self._column_typemap[Qt.CheckStateRole]:
             flags |= Qt.ItemIsUserCheckable
         return flags
-
-    def overwrite_data(self, data):
-        # Sanity check in case something got corrupted along the way.
-        if __debug__:
-            for o in data:
-                assert isinstance(o, self.itemcls)
-        self.beginResetModel()
-        self._data = data
-        self.endResetModel()

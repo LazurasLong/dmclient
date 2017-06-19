@@ -14,18 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with dmclient.  If not, see <http://www.gnu.org/licenses/>.
 #
-
-"""dmclient's Qt interface.
-
-The module itself provides a variety of utility functions that submodules are
-expected to use to avoid bugs caused by code duplication.
-
-"""
+import os
 
 from PyQt5.QtWidgets import QFileDialog, QMessageBox, QSizePolicy, QWidget
 
 from core import filters
-from core.config import APP_PATH
+from core.config import appconfig
 
 
 def display_error(parent, msg, title="Error"):
@@ -41,16 +35,43 @@ def display_info(parent, msg, title="Information"):
     QMessageBox.information(parent, title, msg)
 
 
-def get_open_filename(parent, title, filter_=filters.any, dir_="test"):
-    return QFileDialog.getOpenFileName(parent, title, dir_, filter_)[0]
+def _qfiledialog(f, parent, title, dir_=None, filter_=filters.any,
+                 recent_key=None):
+    if recent_key and not dir_:
+        try:
+            path = appconfig().recent_dirs[recent_key]
+        except KeyError as e:
+            path = os.path.expanduser('~')
+    else:
+        path = dir_
+    # The static functions are better than the ctor because they use native
+    # widgets, so we should deduce the recent dir from the path
+    val = f(parent, title, path, filter_)
+    if recent_key and val:
+        if isinstance(val, tuple):
+            recent_path = val[0]
+        else:
+            recent_path = val
+        appconfig().recent_dirs[recent_key] = os.path.dirname(recent_path)
+    return val
 
 
-def get_open_filenames(parent, title, filter_=filters.any, dir_=APP_PATH):
-    return QFileDialog.getOpenFileNames(parent, title, dir_, filter_)[0]
+def get_open_filename(parent, title, filter_=filters.any, dir_=None,
+                      recent_key=None):
+    return _qfiledialog(QFileDialog.getOpenFileName, parent,
+                        title, dir_, filter_, recent_key)[0]
 
 
-def get_save_filename(parent, title, filter_=filters.any, dir_=APP_PATH):
-    return QFileDialog.getSaveFileName(parent, title, dir_, filter_)[0]
+def get_open_filenames(parent, title, filter_=filters.any, dir_=None,
+                       recent_key=None):
+    return _qfiledialog(QFileDialog.getOpenFileNames, parent,
+                        title, dir_, filter_, recent_key)
+
+
+def get_save_filename(parent, title, filter_=filters.any, dir_=None,
+                      recent_key=None):
+    return _qfiledialog(QFileDialog.getSaveFileName, parent, title, dir_,
+                        filter_, recent_key)[0]
 
 
 def get_polar_response(parent, msg, affirmative, title="Question",

@@ -16,6 +16,7 @@
 #
 
 """Qt-specific main campaign window and some supporting dialogs."""
+
 import webbrowser
 from logging import getLogger
 
@@ -23,12 +24,6 @@ from PyQt5.QtCore import Qt, pyqtSlot
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import *
-
-from campaign import battlemap
-from ui.widgets.campaign.new import Ui_NewCampaignDialog
-from ui.widgets.campaign.properties import Ui_CampaignProperties
-from ui.widgets.campaign.session import Ui_CampaignSession
-from ui.widgets.campaign.window import Ui_MainWindow
 
 from campaign import Campaign, CampaignSession
 from campaign.battlemap import Map
@@ -45,6 +40,10 @@ from ui.archive import ArchiveDialog
 from ui.preferences import show_preferences
 from ui.schemamap import schema_ui_map
 from ui.tools import DiceController as DiceController, DiceRollerDialog, QObject
+from ui.widgets.campaign.new import Ui_NewCampaignDialog
+from ui.widgets.campaign.properties import Ui_CampaignProperties
+from ui.widgets.campaign.session import Ui_CampaignSession
+from ui.widgets.campaign.window import Ui_MainWindow
 
 log = getLogger(__name__)
 
@@ -85,6 +84,7 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
         self.on_campaign_properties_changed(campaign)
 
         self.setupUi(self)
+        self.remove_document.setIcon(QIcon.fromTheme("edit-delete"))
         self.statusbar.showMessage("Welcome to %s" % APP_NAME)
         self.setWindowTitle(campaign.name)
 
@@ -112,10 +112,13 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
         # self.edit_map_layers.triggered.connect(self._map_layers_dlg.show)
 
     def _init_asset_tree(self):
+        at = self.assetTree = QTreeView()
+        at.setContextMenuPolicy(Qt.CustomContextMenu)
+
         dock = QDockWidget(self)
-        self.assetTree = QTreeView(dock)
-        dock.setWidget(self.assetTree)
         dock.setWindowTitle("Campaign assets")
+        dock.setWidget(at)
+
         self.showhide_assettree.triggered.connect(dock.setVisible)
         self.addDockWidget(Qt.LeftDockWidgetArea, dock)
 

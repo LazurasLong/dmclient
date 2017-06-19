@@ -115,6 +115,7 @@ class AppConfig:
     def __init__(self):
         self.open_last_campaign = False
         self.last_campaign_path = ""
+        self.recent_dirs = {}
 
     def update(self, source):
         for attr in [attr for attr in self.__dict__ if
