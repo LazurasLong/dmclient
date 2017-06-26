@@ -17,32 +17,39 @@
 
 from logging import getLogger
 
-from PyQt5.QtCore import QTimer
-from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import QObject, QTimer, pyqtSlot
+from PyQt5.QtGui import QIcon, QStandardItem
 
+from core import filters
 from model.tree import DictNode, ListNode, Node, NodeFactory, TreeModel
+from ui import get_open_filename
 from ui.battlemap.controls import ControlScheme
 from ui.battlemap.widgets import RegionalMapView
 from ui.campaign import CampaignWindow
+from ui.search import SearchCompleter
 
 log = getLogger(__name__)
 
 
-class SearchController:
-    def __init__(self, delphi, lineedit, results_popup, interval_msec=250):
+class SearchController(QObject):
+    """
+    .. todo::
+        Make this class more MVC-ish. It does too much. It'd be nice if it also
+        followed the general pattern of ``spawn_view()``.
+
+    """
+    def __init__(self, delphi, completer, interval_msec=250):
+        super().__init__()
         self._delphi = delphi
+        delphi.responder = self
+
         self._update_delay = interval_msec
         self.search_query = ""
-        self.lineedit = lineedit
-        self.results_popup = results_popup
+
         self._timer = QTimer()
         self._timer.setInterval(interval_msec)
         self._timer.setSingleShot(True)
-        self._timer.timeout.connect(self.search_requested)
-
-    def assign_widgets(self, lineedit, results_popup):
-        self.lineedit = lineedit
-        self.results_popup = results_popup
+        self._timer.timeout.connect(self.on_search_requested)
 
     @property
     def update_delay(self):
@@ -86,29 +93,51 @@ class SearchController:
         self.results_popup.show()
         self.results_popup.raise_()
 
-    def search_text_changed(self, text):
+    @pyqtSlot(str)
+    def on_search_text_changed(self, text):
         log.debug("search text changed: {}".format(text))
         self.search_query = text
         if not text:
             return
         self._timer.start()
 
-    def search_requested(self):
-        self._timer.stop()
+    @pyqtSlot()
+    def on_search_requested(self):
+        if not self._delphi.enabled:
+            log.error("A search was requested but the oracle is not available.")
+            return
         log.debug("a search was requested: `%s'", self.search_query)
-        self._delphi.send_search_query(self.search_query)
+        self._timer.stop()
+        self._delphi.search_query(self.search_query)
 
-    def search_results_updated(self, results):
+    @pyqtSlot()
+    def on_search_results_updated(self, results):
         log.debug("SearchController received search results!")
+        model = self._build_results_model(results)
+        self.results_popup.setModel(model)
+
+    def set_search_results(self, results):
+        model = self.model
         for section in results:
-            for result in results[section]:
-                log.debug("received a result: %s:%s", section, result)
+            section_item = QStandardItem(section)
+            section_item.setEditable(False)
+            section_item.setSelectable(False)
+            for name, icon in results[section]:
+                item = QStandardItem(name)
+                item.setIcon(icon)
+                item.setEditable(False)
+                section_item.appendRow(item)
+            model.appendRow(section_item)
 
 
 class CampaignController:
     def __init__(self, campaign, delphi):
         self.campaign = campaign
         self.delphi = delphi
+
+        # FIXME this does not belong here...
+        self.delphi.init_database(campaign.id)
+
         self.search_controller = None
         v = self.view = CampaignWindow(self.campaign)
 
@@ -118,9 +147,10 @@ class CampaignController:
         v.assetTree.setModel(model)
         v.assetTree.doubleClicked.connect(model.actionTriggered)
 
-        sc = self.search_controller = SearchController(self.delphi)
-        v.searchEdit.textChanged.connect(sc.search_text_changed)
-        v.searchEdit.returnPressed.connect(sc.search_requested)
+        sc = self.search_controller = SearchController(self.delphi,
+                                                       SearchCompleter())
+        v.searchEdit.textChanged.connect(sc.on_search_text_changed)
+        v.searchEdit.returnPressed.connect(sc.on_search_requested)
 
     def show_map(self, id):
         log.debug("show_map(%s)", id)
@@ -169,3 +199,14 @@ class CampaignController:
     def window_moved(self):
         """Called when the main campaign window is moved."""
         self.search_controller.update_results_popup()
+
+    @pyqtSlot()
+    def on_add_note(self):
+        path = get_open_filename(self.view, "Add external document",
+                                 filters.document)
+        if not path:
+            return
+        try:
+            self.search_controller
+        except OSError as e:
+            log.error("could not open note: %s", e)

@@ -14,12 +14,26 @@
 # You should have received a copy of the GNU General Public License
 # along with dmclient.  If not, see <http://www.gnu.org/licenses/>.
 #
+
 from logging import getLogger
 
 from oracle.delphi import Delphi, DummyDelphi
 
 
 log = getLogger("delphi")
+
+
+class Document:
+    """
+    Lightweight value-object containing information about a document. Intended
+    to be passed around between the oracle and dmclient as-needed.
+    """
+    def __init__(self):
+        self.id = None
+        self.type = None
+        self.title = None
+        self.author = None
+        self.last_indexed = None
 
 
 def spawn_oracle(args):
@@ -30,7 +44,7 @@ def spawn_oracle(args):
 
     if args.disable_oracle:
         log.info("The oracle remains silent today...")
-        return DummyDelphi()
+        return DummyDelphi(args)
 
     delphi = Delphi(args)
     delphi.start()

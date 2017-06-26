@@ -15,69 +15,94 @@
 # along with dmclient.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-"""This module provides the majority of the implementation of the
-Oracle. Some refactoring is probably required at some point, as this
-thing is expected to get huge.
-
 """
+This module provides the majority of the implementation of the *oracle*, the
+document indexing and searching powered by xapian.
 
+The oracle is a separate process with the following commands available:
+
+* index *document*
+* search *query-expr*
+
+The context in which this module is imported and executed is within that
+oracle subprocess, _not_ the primary dmclient process.
+"""
+import importlib
 import logging
 import os
-import subprocess
 import sys
-from queue import Queue
-from threading import Thread, Lock
+from threading import Lock, Thread
 
 import xapian
 
 from core.config import TMP_PATH
 from oracle.index import Indexer
+from oracle.search import Searcher
 
 log = logging.getLogger("dmoracle")
 
-SEARCH_DATABASE_NAME = "dmoracle-xapian.db"
+
+def _load_default_providers():
+    """
+
+    :return: A dictionary of provider-name to provider classes.
+    """
+    providers = {}
+    default_providers = ["pdf"]
+    for provider_name in default_providers:
+        try:
+            log.debug("loading search provider `%s'...", provider_name)
+            provider_module = importlib.import_module("oracle.provider.{}"
+                                                      .format(provider_name))
+            providers[provider_name] = provider_module.Provider()
+            log.debug("done!")
+        except AttributeError:
+            log.error("search provider `%s' is unusable (no Provider found)",
+                      provider_name)
+        except ImportError as e:
+            log.error("cannot import search provider `%s': %s",
+                      provider_name, e)
+
+    return providers
 
 
-def pdf2txt(source_name, destination_file):
-    return subprocess.call(["pdf2txt.py", source_name], stdout=destination_file)
+class OracleDatabase:
+    def __init__(self, xdb):
+        self.documents = {}
+        self.xdb = xdb
+        self.lock = Lock()
 
 
-def create_or_open_database(override_path=None):
-    path = override_path if override_path is not None \
-        else os.path.join(TMP_PATH, SEARCH_DATABASE_NAME)
-    return xapian.WritableDatabase(path, xapian.DB_CREATE_OR_OVERWRITE)  # TODO
+class Oracle:
+    """
+    Mediator and Listener class.
+    """
+    database_prefix = "dmoracle"
+    database_suffix = "xapian.db"
 
-
-class Listener:
-    def __init__(self, connection, indexer, searcher):
+    def __init__(self, delphi_pipe, indexer, searcher):
         self.thread = Thread(target=self.run, name="listener")
-        self.connection = connection
-
+        self.delphi_pipe = delphi_pipe
         self.indexer = indexer
         self.searcher = searcher
 
-    def run(self):
-        while 1:
-            try:
-                cmdstr = self.connection.recv().decode()
-                log.debug("received command: `%s'", cmdstr)
+    #
+    # Oracle endpoint implementation.
+    #
 
-                cmd, *args = cmdstr.split(' ')
-                log.debug("got cmd %s(%s)", cmd, args)
-                if getattr(self, cmd)(*args):
-                    log.warning("cmd returned something...")
-            except EOFError:
-                log.error("error: received end-of-file")
-                break
-            except UnicodeDecodeError as e:
-                log.error("error receiving command: %s", e)
-            except (AttributeError, TypeError, ValueError) as e:
-                log.error("invalid command `%s': %s", cmdstr, e)
+    def init_database(self, id):
+        database_path = self._database_path(id)
+        xdb = xapian.WritableDatabase(database_path,
+                                      xapian.DB_CREATE_OR_OVERWRITE)
+        database = OracleDatabase(xdb)
+        self.searcher.database_changed(database)
+        self.indexer.database_changed(database)
 
     def ack(self, ack):
         if ack != "ack":
             log.warning("ack is not ack...")
-        self.connection.send("hello")
+        out, in_ = self.delphi_pipe
+        out.send("hello")
 
     def index(self, path):
         self.indexer.pending.put(path)
@@ -85,54 +110,51 @@ class Listener:
     def search(self, *query):
         self.searcher.pending.put(' '.join(query))
 
-
-class Searcher:
-    def __init__(self, database, database_lock, indexer, stemmer, query_parser):
-        self.database = database
-        self.database_lock = database_lock
-        self.thread = Thread(target=self.run, name="searcher")
-        self.pending = Queue()
-        self.indexer = indexer
-        self.stemmer = stemmer
-        self.query_parser = query_parser
+    #
+    # Threading magic.
+    #
 
     def run(self):
+        out, in_ = self.delphi_pipe
         while 1:
-            query = self.pending.get()
-            with self.database_lock:
-                self.print_results(query)
+            try:
+                cmdstr = in_.recv().decode()
+                log.debug("received command: `%s'", cmdstr)
 
-    def print_results(self, query):
-        enquire = xapian.Enquire(self.database)
-        query = self.query_parser.parse_query(query)
-        enquire.set_query(query)
-        matches = enquire.get_mset(0, 10)
-        print("%d results found" % matches.get_matches_estimated())
-        for m in matches:
-            print("\t{}: {}%% docid={}\n\t\t{}".format(m.rank, m.percent,
-                                                       m.docid,
-                                                       m.document.get_data()))
+                cmd, *args = cmdstr.split(' ')
+                log.debug("got cmd %s(%s)", cmd, args)
+                cmd_method = getattr(self, cmd, None)
+                if not cmd_method:
+                    log.error("invalid command `%s'", cmdstr)
+                    continue
+                if cmd_method(*args):
+                    log.warning("cmd returned something...")
+            except EOFError:
+                log.error("error: received end-of-file")
+                break
+            except UnicodeDecodeError as e:
+                log.error("error receiving command: %s", e)
+
+    #
+    # Helper methods
+    #
+
+    @classmethod
+    def _database_path(cls, id):
+        database_name = "{}-{}-{}".format(cls.database_prefix,
+                                          id,
+                                          cls.database_suffix)
+        return os.path.join(TMP_PATH, database_name)
 
 
-def oracle_main(args, pipe):
-    database = create_or_open_database()
-    database_lock = Lock()
-
-    delphiout, delphiin = pipe
-
+def oracle_main(args, delphi_pipe):
     stemmer = xapian.Stem("english")
 
-    indexer = xapian.TermGenerator()
-    indexer.set_stemmer(stemmer)
+    providers = _load_default_providers()
 
-    query_parser = xapian.QueryParser()
-    query_parser.set_stemmer(stemmer)
-    query_parser.set_database(database)
-    query_parser.set_stemming_strategy(xapian.QueryParser.STEM_SOME)
-
-    indexer = Indexer(database, database_lock, indexer, stemmer)
-    searcher = Searcher(database, database_lock, indexer, stemmer, query_parser)
-    listener = Listener(delphiin, indexer, searcher)
+    indexer = Indexer(stemmer, providers)
+    searcher = Searcher(stemmer)
+    listener = Oracle(delphi_pipe, indexer, searcher)
 
     try:
         indexer.thread.start()

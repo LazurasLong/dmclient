@@ -69,6 +69,7 @@
     <addaction name="close_campaign"/>
     <addaction name="separator"/>
     <addaction name="import_rules"/>
+    <addaction name="add_note"/>
     <addaction name="separator"/>
     <addaction name="quit"/>
    </widget>
@@ -86,6 +87,7 @@
     <addaction name="actionSelect_All"/>
     <addaction name="separator"/>
     <addaction name="actionFind"/>
+    <addaction name="search_oracle"/>
     <addaction name="separator"/>
     <addaction name="edit_preferences"/>
     <addaction name="separator"/>
@@ -514,6 +516,16 @@
   <action name="export_map_to_json">
    <property name="text">
     <string>Export to JSON...</string>
+   </property>
+  </action>
+  <action name="search_oracle">
+   <property name="text">
+    <string>Search...</string>
+   </property>
+  </action>
+  <action name="add_note">
+   <property name="text">
+    <string>Add note...</string>
    </property>
   </action>
  </widget>

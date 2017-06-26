@@ -71,8 +71,11 @@ def _make_campaign(archive):
                              CampaignPropertiesSchema)
     campaign = Campaign(**properties)
 
-    loader = NoteLoader()
-    campaign.notes = loader.load(archive)
+    try:
+        loader = NoteLoader()
+        campaign.notes = loader.load(archive)
+    except Exception as e:
+        log.error("campaign notes unavailable: %s", e)
 
     for sessiondir in archive.subdir("sessions").dirs():
         try:
@@ -220,10 +223,9 @@ def _make_maps(mapdir):
 class NoteLoader:
     def load(self, archive):
         """Return a list of notes."""
-        schema = NoteSchema()
-        notes = _parse_json(archive.textfile("notes.json"), schema)
+        notes = _parse_json(archive.textfile("notes.json"), NoteSchema)
         for note in notes:
-            id, url,
+            pass
 
 
 class FileIOWrapper:

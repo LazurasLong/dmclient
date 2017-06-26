@@ -1,27 +1,53 @@
+# oracle/__init__.py
+# Copyright (C) 2017 Alex Mair. All rights reserved.
+# This file is part of dmclient.
+#
+# dmclient is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, version 2 of the License.
+#
+# dmclient is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with dmclient.  If not, see <http://www.gnu.org/licenses/>.
+#
+
 from PyQt5.QtCore import QSize, Qt
-from PyQt5.QtGui import QStandardItem, QStandardItemModel
 from PyQt5.QtWidgets import *
 
 from widgets import ProgressIndicator
 
-__all__ = ["SearchQueryEdit", "SearchResultsWidget"]
+
+__all__ = ["SearchCompleter", "SearchQueryEdit", "SearchResultsView",
+           "SearchResultsListView", "TreeViewDelegate"]
 
 
 class SearchQueryEdit(QLineEdit):
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.setPlaceholderText("Enter search query...")
-
-
-class SearchResultsWidget(QDialog):
     def __init__(self, parent=None):
-        super().__init__(parent, Qt.Window | Qt.FramelessWindowHint)
-        self.layout = QVBoxLayout()
-        self.layout.setSpacing(0)
-        self.setLayout(self.layout)
-        self.results_view = SearchResultsListView()
-        self.layout.addWidget(self.results_view)
+        super().__init__(parent)
+        self.setCompleter(SearchCompleter())
+        self.setPlaceholderText("Enter search query")
+        self.setFocusPolicy(Qt.StrongFocus)
 
+
+class SearchCompleter(QCompleter):
+    def __init__(self):
+        super().__init__()
+        self.setCompletionMode(QCompleter.PopupCompletion)
+
+    def showIndexingBlurb(self):
+        pass
+
+    def hideIndexingBlurb(self):
+        pass
+
+
+class SearchResultsView(QAbstractItemView):
+    def __init__(self, parent=None):
+        super().__init__(parent)
         layout = QHBoxLayout()
         layout.addSpacerItem(
                 QSpacerItem(4, 4, QSizePolicy.Expanding, QSizePolicy.Minimum))
@@ -40,30 +66,12 @@ class SearchResultsWidget(QDialog):
         self.indexing_blurb = QWidget(self)
         self.indexing_blurb.setLayout(layout)
         self.indexing_blurb.hide()
-        self.layout.addWidget(self.indexing_blurb)
-
-    def _build_results_model(cls, results):
-        model = QStandardItemModel()
-        for section in results:
-            section_item = QStandardItem(section)
-            section_item.setEditable(False)
-            section_item.setSelectable(False)
-            for name, icon in results[section]:
-                item = QStandardItem(name)
-                item.setIcon(icon)
-                item.setEditable(False)
-                section_item.appendRow(item)
-            model.appendRow(section_item)
-        return model
 
     @staticmethod
     def grey_text(text):
         return (
             "<html><head/><body><p><span style=\"font-size:12px;font-style:italic; color:#4a4a4a;\">{}</span></p></body></html>".format(
                     text))
-
-    def on_search_results(self, search_results):  # FIXME terrible name
-        self.results_view.setModel(search_results)
 
 
 class TreeViewDelegate(QStyledItemDelegate):

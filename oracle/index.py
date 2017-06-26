@@ -26,43 +26,62 @@ import xapian
 log = getLogger(__name__)
 
 
-class Document:
-    pass
-
-
-class DocumentMetadata:
+class IndexWatchdog:
+    """
+    This class monitors documents held by the indexer and pushes them onto the
+    indexing queue if they are found to be out-of-date.
+    """
     def __init__(self):
-        self.title = None
-        self.author = None
-        self.last_modified = None
+        self.thread = Thread(target=self.run, name="indexer-watchdog")
+
+    def run(self):
+        pass
 
 
 class Indexer:
-    def __init__(self, database, database_lock, indexer, stemmer):
-        self.database = database
-        self.database_lock = database_lock
-        self.indexer = indexer
+    def __init__(self, stemmer, providers):
+        """
+
+        :param stemmer:
+        :param providers:  A dictionary of ``document-type`` to ``Provider``
+                           instances that this indexer may use to extract
+                           document text from.
+        """
+        self.term_generator = xapian.TermGenerator()
+        self.term_generator.set_stemmer(stemmer)
         self.stemmer = stemmer
+        self.providers = providers
 
         self.thread = Thread(target=self.run, name="indexer")
         self.pending = Queue()
 
-        self.providers = []
+        self.database = None
+
+    def database_changed(self, database):
+        # FIXME this is going to cause a race condition if the db changes
+        # whilst we are searching for something......
+        self.database = database
 
     def run(self):
         while 1:
-            path = self.pending.get()
+            document = self.pending.get()
             try:
-                log.debug("indexing...")
-                self.index_pdf(path)
-                log.debug("done")
-            except xapian.Error as e:
-                log.error("xapian error whilst indexing `%s': %s", path, e)
+                provider = self.providers[document.type]
+            except KeyError:
+                log.error("no provider `%s' for document `%s'",
+                          document.type, document.id)
+            else:
+                try:
+                    text = provider.extract_document_text(document)
+                    self._index_document_text(text)
+                except xapian.Error as e:
+                    log.error("xapian error whilst indexing `%s': %s",
+                              document, e)
 
-    def index_document(self, text):
-        with self.database_lock:
-            document = xapian.Document()
-            document.set_data(text)
-            self.indexer.set_document(document)
-            self.indexer.index_text(text)
-            self.database.add_document(document)
+    def _index_document_text(self, text):
+        document = xapian.Document()
+        document.set_data(text)
+        self.term_generator.set_document(document)
+        self.term_generator.index_text(text)
+        with self.database.lock:
+            self.database.xdb.add_document(document)

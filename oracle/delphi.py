@@ -24,20 +24,16 @@ to the oracle, you must first travel to Delphi  :)
 
 """
 
+import sys
 import threading
 from itertools import product
 from logging import getLogger
-
-import sys
-
-from multiprocessing import Pipe
-
-from multiprocessing import Process
+from multiprocessing import Pipe, Process
 
 log = getLogger("delphi")
 
 if __debug__:
-    bad_modules = ["PyQt5", ]
+    bad_modules = ("PyQt5", )
 
 
     def module_sanity_check():
@@ -48,8 +44,9 @@ if __debug__:
 
         """
         for module_name, bad_module in product(sys.modules.keys(), bad_modules):
-            assert bad_module not in module_name, "{} was in sys.modules ({})".format(
-                    bad_module, sys.modules)
+            assert bad_module not in module_name,\
+                "{} was in sys.modules ({})"\
+                    .format(bad_module, sys.modules)
 else:
     def process_sanity_check():
         pass
@@ -71,45 +68,99 @@ class DummyDelphi:
 
     """
 
-    def __init__(self):
-        self.search_callback = None
+    def __init__(self, args=None):
+        """
 
-    def send_search_query(self, query):
-        if not self.search_callback:
-            return
-        error_results = {"Warning": ["The Oracle is not available."]}
-        self.search_callback(error_results)
+        :param args:  Unused.
+        """
+        self.enabled = True
+        self.documents = []
+
+    def search_query(self, query):
+        log.debug("dummy delphi receieved %s", query)
 
     def shutdown(self):
         pass
 
 
 class Delphi:
-    """To talk to the Oracle, you must first go through Delphi."""
+    """
+    .. parsed-literal::
+        To talk to the Oracle, you must first go through Delphi.
 
-    TIMEOUT = 1  # seconds
+    *Delphi* represents the dmclient endpoint of the oracle api. It is
+    responsible for dispatching search and indexing requests to the oracle
+    and handling errors.
+    """
+
+    listen_timeout = 1
 
     def __init__(self, args):
+        """
+
+        :param responder: A listener object that accepts the following::
+            indexing_started()
+            indexing_completed()
+            results_updated()
+            on_error()
+        """
+        self.responder = None
         self.documents = []
         self.keep_going = False
-        self.listen_thread = threading.Thread(target=self.run, name="delphi")
+        self.listen_thread = threading.Thread(target=self.listen_loop,
+                                              name="delphi")
         pipe = Pipe()
         self.oraclein, self.oracleout = pipe
         self.oracle = Process(target=delphi_main_thing, name="dmoracle",
                               args=(args, pipe))
 
-    def index_external_document(self, uuid, path):
+    @property
+    def enabled(self):
+        """
+        :return: ``True`` if the oracle connection is alive and well, ``False``
+        otherwise.
+        """
+        return True
+
+    #
+    # oracle API dispatch.
+    #
+
+    def init_database(self, id):
+        self._send_message("init_database %s", id)
+
+    def index(self, uuid, path):
         log.debug("Delphi requested to index external: (%s, %s)", uuid, path)
+        self.responder.indexing_started()
+
+    def search_query(self, query):
+        self._send_message("search %s", query)
+
+    #
+    # Delphi endpoint methods.
+    #
+
+    def error(self):
+        """
+        A fatal error occurred on the oracle
+        :return:
+        """
+        self.keep_going = False
+        if self.responder:
+            self.responder.on_error()
+
+    def search_completed(self, id, results):
+        log.debug("receieved some completed results for %s: %s", id, results)
+
+    #
+    # Threading magic.
+    #
 
     def start(self):
         self.keep_going = True
         self.listen_thread.start()
         self.oracle.start()
         log.debug("delphi started, oracle PID = %d" % self.oracle.pid)
-
-    def send_message(self, message, *args):
-        encoded_message = (message % args).encode()
-        self.oraclein.send(encoded_message)
 
     def shutdown(self):
         log.debug("shutdown triggered")
@@ -118,10 +169,20 @@ class Delphi:
         self.oracle.terminate()
         self.oracle.join()
 
-    def run(self):
+    def listen_loop(self):
         log.debug("delphi thread started")
+        timeout = self.listen_timeout
         oraclein = self.oraclein
         while self.keep_going:
-            if oraclein.poll(self.TIMEOUT):
+            if oraclein.poll(timeout):
                 obj = oraclein.recv()
                 log.debug("received `%s' from oracle", obj)
+
+    #
+    # Helper methods
+    #
+
+    def _send_message(self, message, *args):
+        encoded_message = (message % args).encode()
+        self.oraclein.send(encoded_message)
+

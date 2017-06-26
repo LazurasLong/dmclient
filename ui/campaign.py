@@ -77,6 +77,8 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
 
         Also, maybe the controller logic can be re-used across other platforms?
     """
+    windowMoved = pyqtSignal()
+    windowResized = pyqtSignal()
 
     def __init__(self, campaign):
         QMainWindow.__init__(self)
@@ -118,14 +120,19 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
         self.addDockWidget(Qt.LeftDockWidgetArea, dock)
 
     def _init_search_widgets(self):
-        self.searchEdit = QLineEdit(self)
-        self.searchEdit.setPlaceholderText("Search")
-        self.toolBar.addAction()
-        self.toolBar.addWidget(spacer_widget())
-        self.toolBar.addWidget(self.searchEdit)
+        tb = self.toolBar
+        edit = self.searchEdit = QLineEdit(self)
+
+        edit.setPlaceholderText("Search")
+        self.search_oracle.triggered.connect(
+            lambda: edit.setFocus(Qt.TabFocusReason))
+        tb.addWidget(spacer_widget())
+        tb.addWidget(edit)
+
         def hacky_stopper(*args):
             log.error("Should not add widgets to the toolbar now!")
-        self.toolBar.addWidget = hacky_stopper
+
+        tb.addWidget = hacky_stopper
 
     def _init_session_list(self, campaign):
         dock = QDockWidget(self)

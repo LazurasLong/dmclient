@@ -1,4 +1,3 @@
-
 """A *search provider* provides the oracle with a source of documents.
 
 Some examples::
@@ -21,12 +20,21 @@ class SearchProvider:
 
 
 class FileProvider(SearchProvider):
-    def index_document(self, path):  # wtf is path
+    def is_acceptable_document(self, path):
+        """
+        Most provider subclasses will check the path and use ``magic`` module.
+
+        :param path:
+        :return:  ``True`` if the document can be indexed by this provider,
+                  ``False`` otherwise.
+        """
+        return True
+
+    def extract_document_text(self, path):  # wtf is path
         try:
-            return self.index_file_contents(path)
+            return self.extract_file_text(path)
         except OSError as e:
             raise IndexError("failed to index document!") from e
 
-    def index_file_contents(self, path):
+    def extract_file_text(self, path):
         raise NotImplementedError
-

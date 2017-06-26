@@ -10,14 +10,14 @@
 from oracle.provider import FileProvider
 
 
-class PlaintextProvider(FileProvider):
+class Provider(FileProvider):
     def __init__(self):
         pass
 
     def index_file_metadata(self, path):
         pass
 
-    def index_file_contents(self, path):
+    def extract_file_text(self, path):
         with open(path) as f:
             return f.readlines()
 

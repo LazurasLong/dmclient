@@ -6,12 +6,16 @@ Provides a means to index PDFs.
 import io
 import logging
 
+import autocorrect
+import magic
 import pdfminer
 import pdfminer.high_level
 import pdfminer.layout
 from pdfminer.image import ImageWriter
 
 from oracle.provider import FileProvider
+
+__all__ = ["Provider"]
 
 log = logging.getLogger(__name__)
 
@@ -67,8 +71,19 @@ def pdf_text(file, outfile):
     pdfminer.high_level.extract_text_to_fp(file, outfile, **locals())
 
 
-class PdfProvider(FileProvider):
-    def index_file_contents(self, path):
+class Provider(FileProvider):
+    def is_acceptable_document(self, path):
+        if not path.endswith(".pdf"):
+            log.debug("cowardly refusing to index `%s' because "
+                      "it doesn't end with `.pdf'", path)
+            return False
+        mime = magic.from_file(path)
+        if not mime.startswith("PDF document"):
+            log.debug("`%s' does not appear to be a PDF document.", path)
+            return False
+        return True
+
+    def extract_file_text(self, path):
         with open(path, 'rb') as f:
             text = self.pdf_text(f)
         return self.spellchecked(text)
@@ -81,7 +96,6 @@ class PdfProvider(FileProvider):
 
     def spellchecked(self, text):
         # TODO: Why does this strip punctuation? Does it matter?
-        import autocorrect
         buf = io.StringIO()
         for line in text.split('\n'):
             for word in line.split(' '):
@@ -109,7 +123,7 @@ def main():
     logging.getLogger("pdfminer").setLevel(logging.ERROR)
     args = argparser.parse_args()
 
-    p = PdfProvider()
+    p = Provider()
 
     log.info("begin text extraction")
     text = p.pdf_text(args.file)
