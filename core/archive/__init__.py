@@ -15,6 +15,14 @@
 # along with dmclient.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+"""
+
+.. note ::
+    For whatever reason, ``tarfile`` on Windows uses forward slashes instead
+    of ``os.sep``. As a result, this module never makes use of
+    ``os.path.join()``.
+"""
+
 import io
 import os.path
 import pathlib
@@ -259,13 +267,13 @@ class DirectoryWrapper:
 
     def subdir(self, name):
         """Return a (sub) directory matching a given name."""
-        return self.archive.subdir(os.path.join(self.prefix, name))
+        return self.archive.subdir(self.prefix + '/' + name)
 
     def file(self, name):
-        return self.archive.file(os.path.join(self.prefix, name))
+        return self.archive.file(self.prefix + '/' + name)
 
     def textfile(self, name):
-        return self.archive.textfile(os.path.join(self.prefix, name))
+        return self.archive.textfile(self.prefix + '/' + name)
 
     def _is_direct_descendent(self, name):
         path = pathlib.PurePath(name)
