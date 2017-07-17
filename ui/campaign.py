@@ -81,8 +81,6 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
 
     def __init__(self, campaign):
         QMainWindow.__init__(self)
-        self.on_campaign_properties_changed(campaign)
-
         self.setupUi(self)
         self.remove_document.setIcon(QIcon.fromTheme("edit-delete"))
         self.statusbar.showMessage("Welcome to %s" % APP_NAME)
