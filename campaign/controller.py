@@ -242,10 +242,9 @@ class CampaignController:
         asset_tree = self.build_asset_tree(self.campaign)
         model = self.asset_tree_model = TreeModel(asset_tree)
 
-        at = self.view.assetTree
-        at.setModel(model)
-        at.doubleClicked.connect(self.asset_tree_doubleclick)
-        at.customContextMenuRequested.connect(self.asset_tree_context_menu_requested)
+        self.view.assetTree.setModel(model)
+        self.view.assetTree.doubleClicked.connect(lambda x: self.asset_tree_doubleclick(x))
+        self.view.assetTree.customContextMenuRequested.connect(self.asset_tree_context_menu_requested)
 
     def _init_subcontrollers(self, view):
         self.map_controller = MapController(view)
@@ -275,8 +274,6 @@ class CampaignController:
 
     def asset_tree_doubleclick(self, index):
         log.debug("asset_tree_doubleclick(%s)", index)
-        if not index.isValid():
-            return
         node = index.internalPointer()
         if node.action:
             node.action(node)  # woo weird!

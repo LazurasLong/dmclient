@@ -61,8 +61,6 @@ class NewCampaignDialog(QDialog, Ui_NewCampaignDialog):
         self.gameSystemList.setCurrentIndex(game_systems.index(0, 0))
         self.options = options
 
-        self._open_assets = {}
-
     def on_advancedOptions_clicked(self):
         raise NotImplementedError
 
@@ -98,8 +96,6 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
         self.complain.triggered.connect(
             lambda: webbrowser.open(BUG_URL))
         self.about.triggered.connect(show_about)
-
-        self._open_assets = {}
 
     def _init_dialogs(self, campaign):
         self._campaign_properties = CampaignPropertiesDialog(campaign, self)
