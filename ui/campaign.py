@@ -112,12 +112,12 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
         # self.edit_map_layers.triggered.connect(self._map_layers_dlg.show)
 
     def _init_asset_tree(self):
-        at = self.assetTree = QTreeView()
-        at.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.assetTree = QTreeView()
+        self.assetTree.setContextMenuPolicy(Qt.CustomContextMenu)
 
         dock = QDockWidget(self)
         dock.setWindowTitle("Campaign assets")
-        dock.setWidget(at)
+        dock.setWidget(self.assetTree)
 
         self.showhide_assettree.triggered.connect(dock.setVisible)
         self.addDockWidget(Qt.LeftDockWidgetArea, dock)
