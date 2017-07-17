@@ -135,7 +135,6 @@ class AppController:
             # don't constantly annoy the user with a broken campaign on startup.
             if core.config.appconfig().last_campaign_path == path:
                 core.config.appconfig().last_campaign_path = ""
-            # Kind of annoying, but what else can we do...
             self.show_new_campaign()
 
     def on_campaign_loaded(self, campaign):
