@@ -19,7 +19,7 @@ from logging import getLogger
 
 from PyQt5.QtCore import QObject, QTimer, pyqtSlot
 from PyQt5.QtGui import QIcon, QStandardItem
-from PyQt5.QtWidgets import QAction, QMenu
+from PyQt5.QtWidgets import QMenu
 
 from core import filters
 from model.tree import DictNode, ListNode, Node, NodeFactory, TreeModel
@@ -274,6 +274,7 @@ class CampaignController:
         self.search_controller.update_results_popup()
 
     def asset_tree_doubleclick(self, index):
+        log.debug("asset_tree_doubleclick(%s)", index)
         if not index.isValid():
             return
         node = index.internalPointer()
@@ -281,6 +282,7 @@ class CampaignController:
             node.action(node)  # woo weird!
 
     def asset_tree_context_menu_requested(self, point):
+        log.debug("asset_tree_context_menu_requested(%s)" % point)
         index = self.view.assetTree.indexAt(point)
         node = index.internalPointer()
         controller = node.delegate
