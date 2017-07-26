@@ -132,23 +132,24 @@ class SearchController(QObject):
 
 
 class NoteController(QObject):
-    def __init__(self, campaign_window):
+    def __init__(self, view):
         """
 
-        :param campaign_window:  Ugh, because Qt is weird. And all of the
+        :param view:  Ugh, because Qt is weird. And all of the
         QActions are defined there. Some refactoring is probably needed.
         """
-        super().__init__(campaign_window)
-        self.campaign_window = campaign_window
+        super().__init__(view)
+        self.view = view
         self.tree_node = ListNode(icon=QIcon(":/icons/books.png"),
-                                  text="Documents")
-        campaign_window.import_document.triggered.connect(self.on_import_document)
-        campaign_window.add_external_document.triggered.connect(self.on_add_external_document)
-        campaign_window.remove_document.triggered.connect(self.on_remove_document)
+                                  text="Documents",
+                                  delegate=self)
+        view.import_document.triggered.connect(self.on_import_document)
+        view.add_external_document.triggered.connect(self.on_add_external_document)
+        view.remove_document.triggered.connect(self.on_remove_document)
         # search_node.apply(self.delphi.documents)
 
     def context_menu(self):
-        window = self.campaign_window
+        window = self.view
         return [window.import_document,
                 window.add_external_document,
                 window.remove_document]
@@ -176,8 +177,9 @@ class NoteController(QObject):
         raise NotImplementedError
 
 
-class MapController:
+class MapController(QObject):
     def __init__(self, campaign_window):
+        super().__init__(campaign_window)
         self.campaign_window = campaign_window
         map_node_factory = NodeFactory(action=self.show_map)
 
@@ -186,7 +188,9 @@ class MapController:
         encounter = DictNode(text="Encounters", child_factory=map_node_factory)
         # encounter.apply(campaign.encounter_maps)
 
-        self.tree_node = Node(icon=QIcon(":/icons/maps.png"), text="Maps")
+        self.tree_node = Node(icon=QIcon(":/icons/maps.png"),
+                              text="Maps",
+                              delegate=self)
         self.tree_node.add_child(region)
         self.tree_node.add_child(encounter)
 
@@ -206,14 +210,17 @@ class MapController:
         return RegionalMapView(map, ControlScheme(), self.campaign_window)
 
 
-class PlayerController:
+class PlayerController(QObject):
     def __init__(self, view):
-        self.tree_node = ListNode(text="Players", icon=QIcon(":/icons/party.png"),
+        super().__init__(view)
+        self.tree_node = ListNode(text="Players",
+                                  icon=QIcon(":/icons/party.png"),
                                   delegate=self)
 
 
-class SessionController:
+class SessionController(QObject):
     def __init__(self, view):
+        super().__init__(view)
         icon = QIcon(":/icons/sessions.png")
         session_node_factory = NodeFactory(action=self.show_session, icon=icon)
         self.tree_node = ListNode(icon=icon, text="Sessions",
@@ -283,7 +290,10 @@ class CampaignController:
         index = self.view.assetTree.indexAt(point)
         node = index.internalPointer()
         controller = node.delegate
+        if not controller:
+            log.debug("There is no controller on this node.")
+            return
         context_menu = QMenu("Asset tree context menu")
         for action in controller.context_menu():
             context_menu.addAction(action)
-        context_menu.exec(self.view.mapToGlobal(point))
+        context_menu.exec(controller.view.mapToGlobal(point))
