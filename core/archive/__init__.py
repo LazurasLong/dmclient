@@ -28,12 +28,8 @@ import os.path
 import pathlib
 import tarfile
 from logging import getLogger
-from uuid import UUID
-
-from PyQt5.QtGui import QPixmap
 
 from campaign import Campaign, CampaignSession
-from campaign.battlemap import Map, MapPalette, MapSchema, default_palette_spec
 from model.schema import *
 
 __all__ = ["load_campaign", "InvalidArchiveError", "InvalidSessionError"]
@@ -57,10 +53,6 @@ class InvalidSessionError(InvalidArchiveError):
     """Raised when a campaign archive contains invalid data."""
 
 
-class InvalidMapError(InvalidArchiveError):
-    pass
-
-
 def open_expansion(path):
     return None
 
@@ -75,6 +67,7 @@ def load_campaign(path):
 
 
 def _make_campaign(archive):
+    from core.archive.map import make_maps  # FIXME: hack
     properties = _parse_json(archive.textfile("properties.json"),
                              CampaignPropertiesSchema)
     campaign = Campaign(**properties)
@@ -91,13 +84,13 @@ def _make_campaign(archive):
         except InvalidSessionError as e:
             log.error("bad session data: %s", e)
 
-    try:
-        mapdir = archive.subdir("maps")
-        maps = _make_maps(mapdir)
-        print(maps)
-        campaign.regional_maps = maps
-    except NoSuchDirectoryError:
-        pass
+    # try:
+    #     mapdir = archive.subdir("maps")
+    #     maps = make_maps(mapdir)
+    #     print(maps)
+    #     campaign.regional_maps = maps
+    # except NoSuchDirectoryError:
+    #     pass
 
     return campaign
 
@@ -144,88 +137,6 @@ def _parse_json(f, schemacls, errcls=InvalidArchiveError):
         return obj
     except ValueError:
         raise errcls("`{}' is invalid JSON!".format(f.name))
-
-
-class MapLoader:
-    def __init__(self):
-        self._map = None
-
-    def load_map(self, node):
-        """
-
-        :param node:  An archive directory node.
-        :return: A tuple of the map and any warnings encountered whilst
-                 processing the map directory.
-        :raises: InvalidMapError if the directory node contains an invalid map.
-        """
-        properties = self._load_properties(node)
-        biome_mask = self._load_biomes(node)
-        political_mask = self._load_political_mask(node)
-        palette = MapPalette(default_palette_spec)
-        self._map = Map(biome_mask, political_mask, palette, properties["name"])
-        self._load_pins(properties)
-
-        return self._map
-
-    @classmethod
-    def _load_properties(cls, node):
-        propfile = node.file("properties.json")
-        schema = MapSchema()
-        try:
-            map_properties, errors = schema.loads(propfile.read())
-            if errors:
-                log.error("invalid map file `%s': %r", propfile.name, errors)
-                raise InvalidMapError
-            return map_properties
-
-        except ValueError:
-            raise InvalidMapError("invalid map file `{}': ", propfile.name)
-
-    @classmethod
-    def _load_qpixmap(cls, filewrapper):
-        pixmap = QPixmap()
-        image_data = filewrapper.read()
-        pixmap.loadFromData(image_data)
-        return pixmap
-
-    @classmethod
-    def _load_biomes(cls, node):
-        return cls._load_qpixmap(node.file("geography.png"))
-
-    @classmethod
-    def _load_political_mask(cls, node):
-        return cls._load_qpixmap(node.file("political.png"))
-
-    def _load_pins(self, properties):
-        """
-
-        :param properties: A parsed MapSchemaDictionary
-        :return: Nothing; this function updates ``self._map`` in-place.
-        """
-        self._map.add_pins(properties["pins"])
-
-
-class MapDumper:
-    def __init__(self, map):
-        self.map = map
-
-    def dump_properties(self, file):
-        schema = MapSchema()
-        json = schema.dumps(self.map)
-        file.write(json)
-
-
-def _make_maps(mapdir):
-    maps = {}
-    loader = MapLoader()
-    for map_dir in mapdir.dirs():
-        try:
-            uuid = UUID(map_dir.name)
-            map_ = loader.load_map(map_dir)
-            maps[uuid] = map_
-        except (InvalidMapError, ValueError) as e:
-            log.error("cannot load map: %s", e)
-    return maps
 
 
 class NoteLoader:

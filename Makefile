@@ -88,7 +88,8 @@ ui_dirinit=$(addsuffix /__init__.py,$(ui_dirs))
 ui_files=$(ui_files_:.ui=.py)
 
 test_archives=resources/test/protege/testcampaign.dmc \
-	      resources/test/protege/testlibrary.dml
+	      resources/test/protege/testlibrary.dml \
+	      resources/test/badsessiondata.dmc
 
 
 # Primary targets.
