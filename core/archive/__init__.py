@@ -24,6 +24,7 @@
 """
 
 import io
+from json import JSONDecodeError
 import os.path
 import pathlib
 import tarfile
@@ -98,10 +99,9 @@ def _make_campaign(archive):
 def _make_session(sessiondir):
     try:
         propfile = sessiondir.textfile("properties.json")
-    except NoSuchArchiveFileError as e:
-        raise InvalidSessionError("missing properties.json!") from e
-    properties = _parse_json(propfile, SessionPropertiesSchema,
-                             InvalidSessionError)
+        properties = _parse_json(propfile, SessionPropertiesSchema)
+    except (NoSuchArchiveFileError, JSONDecodeError) as e:
+        raise InvalidSessionError("non-existent or malformed properties.json!") from e
     try:
         log_contents = sessiondir.textfile("session.log").read()
     except NoSuchArchiveFileError:
@@ -121,22 +121,22 @@ def _make_session(sessiondir):
     return session
 
 
-def _parse_json(f, schemacls, errcls=InvalidArchiveError):
+def _parse_json(f, schemacls):
     """
     :param f: file-like object to read json from
     :param schemacls: the schema to parse the properties with
     :return: a dictionary containing the validated object
-    :raises: errcls if there is a parse error
+    :raises: JSONDecodeError if the JSON is malformed
     """
     schema = schemacls()
     try:
         obj, errors = schema.loads(f.read())
         if errors:
             log.debug("validation errors: %s", errors)
-            raise errcls("schema validation failed for `{}'".format(f.name))
+            raise JSONDecodeError("schema validation failed", "", 0)
         return obj
     except ValueError:
-        raise errcls("`{}' is invalid JSON!".format(f.name))
+        raise JSONDecodeError("", "", pos=0)
 
 
 class NoteLoader:
