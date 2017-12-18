@@ -1,0 +1,50 @@
+API DOCS
+
+GET /
+    params: none
+    body: none
+    header: none
+    response: 
+                {
+                    success: true,
+                    message: "server is running"
+                }
+
+    description: a basic route for checking if the serer is up
+
+POST /users
+    params: none
+    body:   Username: the user name  of the new user
+            Passwd: the password of the new user
+    header: none
+    response: 
+                {
+                    success: boolean indicating success or failnure,
+                    message: "success" or an apporpriate error message.
+                }
+    description: adds a new user to the database.
+
+POST /authenticate
+    params: none
+    body:   Username: the user name  of the new user
+            Passwd: the password of the new user
+    header: none
+    response:
+                {
+                   success: boolean indicating success or failure,
+                   message: the session token for the verified user an 
+                            apporpriate error message
+                }
+    description: authenticates a user and sends back a session token that is 
+                 valid for a day.
+
+GET /authenticate/check
+    params: none
+    body: none
+    header: a valid session token
+    response:
+                {
+                    success: true
+                    message: the username the token belogs to.
+                }
+    success: a simple route for checking who a token belogs to.
