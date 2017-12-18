@@ -12,7 +12,7 @@ var port = config.port;
 var path = config.path;
 
 console.log("connecting to database...")
-var db = new sqlite3.Database(path, function(err){
+var db = new sqlite3.Database(path, (err)=>{
     if (err){
         console.error(err.message);
         process.exit(1);
@@ -32,35 +32,34 @@ app.use(bodyParser.urlencoded({extended: true}));
 ////////////////////////////////////////////////////////////////////////////////
 
 //for checking server status
-app.get("/", function(req, res){
-    console.log(`${hashedPass} \t ${row.passwd}`);
+app.get("/", (req, res)=>{
     console.log("GET /");
-    res.json({
+    return res.json({
         success: true,
         message: "server is running"
     });
 });
 
 //add a user
-app.post("/users", function(req, res){
+app.post("/users", (req, res)=>{
     var username = req.body.Username;
     var passwd = req.body.Passwd;
     console.log("Creating new user " + username +  "...");
 
     var hashedPass = crypto.createHash('md5').update(passwd).digest('hex');
-    var query = `INSERT INTO users (user_name,password) VALUES( "${username}",`+ 
-        `"${hashedPass}")`;
-    db.run(query, function(err){
+    var query = `INSERT INTO users (user_name,password) VALUES( "${username}",\ 
+        "${hashedPass}")`;
+    db.run(query, (err)=>{
         if (err){
             console.error("failed to add user \n" + err.message);
-            res.json({
+            return res.json({
                 success: false,
                 message: err.message
             });
         }
         else{
             console.log("user added successfully");
-            res.json({
+            return res.json({
                 success: true,
                 message: "success"
             });
@@ -69,31 +68,31 @@ app.post("/users", function(req, res){
 });
 
 //authenticate an existing user
-app.post("/authenticate", function(req,res){
+app.post("/authenticate", (req,res)=>{
     var username = req.body.Username;
     var passwd = req.body.Passwd;
     console.log("Authenticating user " + username +  "...");
 
     var hashedPass = crypto.createHash('md5').update(passwd).digest('hex'); 
     var query = `SELECT id, password FROM users WHERE user_name="${username}"`;
-    db.get(query, function(err, row){
+    db.get(query, (err, row)=>{
         if(err){
             console.error(err.message);
-            res.json({
+            return res.json({
                 success: false,
                 message: err.message
             });
         }
         if(row == undefined){
             console.error(`user ${username} not found`);
-            res.json({
+            return res.json({
                 success: false,
                 message: "user not found"
             });
         }
         if (row.password != hashedPass){
             console.error(`authentication of user ${username} failed`);
-            res.json({
+            return res.json({
                 success: false + decoded,
                 message: "incorect password"
             });
@@ -107,7 +106,7 @@ app.post("/authenticate", function(req,res){
                 expiresIn: 60*60*24 //24 hours
            });
            console.log(`authenticated ${username} successfully`);
-           res.json({
+           return res.json({
                success: true,
                message:  token
            });
@@ -116,21 +115,125 @@ app.post("/authenticate", function(req,res){
     });
 });
 
-app.get("/authenticate/check", verify, function(req, res){
+//check who is logged in
+app.get("/authenticate/check", verify, (req, res)=>{
     var decoded = req.decoded;
     console.log(`checked authentication for ${decoded.username}`);
     console.log(decoded);
-    res.json({
+    return res.json({
         success: true,
         message: decoded.username
     });
 });
 
+//gets the currently supported systems
+app.get("/systems", (req, res)=>{
+
+    console.log("viewing supported systems");
+
+    var query = "SELECT * FROM systems";
+    db.all(query, (err, rows)=>{
+        if (err){
+            console.error(err.message);
+            return res.json({
+                success: false,
+                message: err.message
+            });
+        }
+        else if (rows.length == 0){
+            console.error("systems is empty. This should not happen");
+            return res.json({
+                success: false,
+                message: "There appear to be no supported systems, something \
+                          is wrong."
+            });  
+        }
+        else{
+            return res.json({
+                success: true,
+                message: rows
+            });
+        }
+    });
+});
+
+//create a campaign
+app.post("/campaigns", verify, (req, res)=>{
+    var userId = req.decoded.userId;
+    var systemId = req.body.SystemId;
+    var passwd = req.body.Passwd;
+    var name = req.body.Name;
+
+    var hashedPass = crypto.createHash('md5').update(passwd).digest('hex');
+
+    var query = `INSERT INTO campaigns(author, system, name, password) VALUES`+
+                `(${userId}, ${systemId}, "${name}", "${hashedPass}")`
+
+    console.log(`${req.decoded.username} creating campaign ${name}`);
+    db.serialize(()=>{
+        db.run(query, (err)=>{
+            if(err){
+                console.error(`failed to add campaign. reason: ${err.message}`);
+                return res.json({
+                    success: false,
+                    message: "duplicate campaign name for user"
+                });
+            }
+            else{
+                console.log(`campaign ${name} created. assigning author as gm`);
+                query = `INSERT INTO gms (user, campaign)
+                         SELECT ${userId},
+                                c.id
+                          FROM campaigns c
+                         WHERE c.name = "${name}"
+                           AND c.author = "${userId}"`;
+                db.run(query, (err)=>{
+                    if (err){
+                        console.error(`failed to assign author as gm of `+
+                        `campaign ${name}. removing campaign. reason: \n `+
+                        `${err.message}`);
+
+                        db.run(`DELETE FROM campaigns
+                                 WHERE name = "${name}"
+                                   AND author = "${userId}"`, 
+                            (err)=>{
+                                if (err){
+                                    console.error(`WARNING: DATABASE IN ` +
+                                    `INCONSISTENT STATE. \n FAILED TO REMOVE`+
+                                    ` GMLESS CAMPAIGN ${name}\n THIS MAY`+
+                                    ` REQUIRE MANUAL INTERVENTION.` + 
+                                    `\n REASON: ${err.message}`);
+                                    return res.json({
+                                        success: false,
+                                        message: "CRITICAL ERROR: DATABASE "+
+                                        "INCONSISTENT"
+                                    });
+                                }
+                            });
+
+                        return res.json({
+                            success: false,
+                            message: err.message
+                        });
+                    }
+                    else {
+                        console.log(`assigned author as gm of campaign `+
+                        `${name}`);
+                        return res.json({
+                            success: true,
+                            message: "campaign added successfully"
+                        });
+                    }
+                });
+            }
+        });
+    });
+});
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                SERVER START                                //
 ////////////////////////////////////////////////////////////////////////////////
-app.listen(port, function(){
+app.listen(port, ()=>{
     console.log("dmtool server started on port " + port );
 });
 
@@ -138,20 +241,20 @@ app.listen(port, function(){
 //                            HELPERS AND MIDDLEWARE                          //
 ////////////////////////////////////////////////////////////////////////////////
 function verify(req,res,next) {
-    // check header or url parameters or post parameters for token
+    // check header for token
     var token = req.headers['token'];
     
-    if (token) {
+    if (token) {
   
         // verifies secret and checks exp
-        jwt.verify(token, app.get("authKey"), function(err, decoded) {      
+        jwt.verify(token, app.get("authKey"), (err, decoded)=>{      
             if (err) {
                 console.error("request with invalid token");
-                res.json({
+                return res.json({
                     success: false, 
                     message: 'Failed to authenticate token.' 
                 });  
-            } 
+            }
         
             else {
                 //save to request for use in other routes

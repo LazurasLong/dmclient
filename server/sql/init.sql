@@ -18,7 +18,9 @@ CREATE TABLE campaigns (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
       author INTEGER NOT NULL REFERENCES users,
       system INTEGER NOT NULL REFERENCES systems,
-    password TEXT);
+        name TEXT,
+    password TEXT,
+    CONSTRAINT unq UNIQUE(author, name));
       
 CREATE TABLE gms (
           id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1,0 +1,9 @@
+TODO:
+    > get /authenticate/renew -> renew a token (?) 
+    > put route to assign a user as player of a campaign
+    > put route to assign user as gm of campaign
+    > read(get), update(put), create(post) for all types of notes
+    > post/put/get for stat blocks
+    > pc/npc stuff
+    > campaign resources
+    > a tonne

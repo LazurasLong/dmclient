@@ -2,7 +2,7 @@ API DOCS
 
 GET /
     params: none
-    body: none
+    body:   none
     header: none
     response: 
                 {
@@ -16,7 +16,7 @@ POST /users
     params: none
     body:   Username: the user name  of the new user
             Passwd: the password of the new user
-    header: none
+    header: Content-Type: application/x-www-form-urlencoded
     response: 
                 {
                     success: boolean indicating success or failnure,
@@ -28,7 +28,7 @@ POST /authenticate
     params: none
     body:   Username: the user name  of the new user
             Passwd: the password of the new user
-    header: none
+    header: Content-Type: application/x-www-form-urlencoded
     response:
                 {
                    success: boolean indicating success or failure,
@@ -40,11 +40,47 @@ POST /authenticate
 
 GET /authenticate/check
     params: none
-    body: none
-    header: a valid session token
+    body:   none
+    header: token: a valid session token
     response:
                 {
                     success: true
                     message: the username the token belogs to.
                 }
-    success: a simple route for checking who a token belogs to.
+    description: a simple route for checking who a token belogs to.
+
+GET /systems
+    params: none
+    body: none
+    header: none
+    response:
+                {
+                    success: boolean indicating success of failure
+                    message: an array of supported systems, or an apporpriate
+                             error message.
+                }
+    description: gets all systems supported by dmtool at this time as json 
+                 objects in the format of:
+                    {
+                        id: the system's id in the db. used for other routes
+                        name: the system's name
+                        author: the author of the system
+                        description: a breif description of what the system is.
+                    }
+
+POST /campaigns
+    params: none
+    body:   Name: the name of the campaign to insert
+            SystemId: the id of the system for this campaign
+            Passwd: the password for joining the campaign
+    header: Content-Type: application/x-www-form-urlencoded
+            token: a valid session token
+    response: 
+                {
+                    success: boolean indicating success or failure
+                    message: success or an apporpriate error message
+                }
+    description: creates a campaign in the system and assigns the author of the
+                 campaign as a GM. warning: posibility of critical db breaking 
+                 error. It shouldnt happen though, unless someone is messing 
+                 with the db directly when the request comes in.
