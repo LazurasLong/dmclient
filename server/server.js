@@ -141,7 +141,7 @@ function verify(req,res,next) {
     // check header or url parameters or post parameters for token
     var token = req.headers['token'];
     
-    if (token) {
+    if (token) {
   
         // verifies secret and checks exp
         jwt.verify(token, app.get("authKey"), function(err, decoded) {      
@@ -151,7 +151,7 @@ function verify(req,res,next) {
                     success: false, 
                     message: 'Failed to authenticate token.' 
                 });  
-            } 
+            } 
         
             else {
                 //save to request for use in other routes
