@@ -39,20 +39,6 @@ class PropertiesSchema(Schema):
     creation_date = fields.DateTime(format="iso")
 
 
-class ArchivePropertiesSchema(PropertiesSchema):
-    author = fields.Str(default="")
-    game_system_id = fields.Str(required=True)
-    revision_date = fields.DateTime(format="iso")
-
-
-class CampaignPropertiesSchema(ArchivePropertiesSchema):
-    pass
-
-
-class LibraryPropertiesSchema(ArchivePropertiesSchema):
-    pass
-
-
 class SessionPropertiesSchema(Schema):
     start_time = fields.DateTime(required=True, format="iso")
     end_time = fields.DateTime(required=False, format="iso")

@@ -9,9 +9,10 @@ ui/widgets/**
 xcuserdata
 
 .cache
+
 resources/test/protege/testcampaign.dmc
 resources/test/protege/testlibrary.dml
-resources/test/badsessiondata.dmc
+resources/test/badmeta.dmc
 
 *.iml
 /android/.gradle

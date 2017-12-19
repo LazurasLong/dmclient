@@ -3,32 +3,36 @@
 import pytest
 from dateutil.parser import parse as dtparse
 
-from core.archive import load_campaign
+from core.archive import *
 
 
-@pytest.fixture
-def campaign():
-    return load_campaign("resources/test/protege/testcampaign.dmc")
+@pytest.fixture(scope="module")
+def archive_meta():
+    return ArchiveMeta.load("resources/test/protege/testcampaign.dmc")
 
 
-def test_loading_metadata(campaign):
-    assert campaign.name == "PROTéGé Test Campaign"
-    assert campaign.author == "Alex Mair"
-    assert campaign.game_system_id == "PROTEGE"
-    assert campaign.description == "This is a test campaign for PROTéGé, " \
-                                   "whose main purpose is to ensure that " \
-                                   "dmclient has decent unit tests."
+def test_loading_metadata(archive_meta):
+    assert archive_meta.game_system_id == "PROTEGE"
+    assert archive_meta.name == "PROTéGé Test Campaign"
+    assert archive_meta.description == "This is a test campaign for " \
+                                       "PROTéGé, whose main purpose is " \
+                                       "to ensure that dmclient has decent " \
+                                       "unit tests."
+    assert archive_meta.author == "Alex Mair"
+    assert archive_meta.creation_date == dtparse("2016-04-20")
+    assert archive_meta.revision_date == dtparse("2016-04-21")
 
 
-def test_sessions(campaign):
-    assert len(campaign.sessions) == 2
+class TestInvalid:
+    """
+    Ensure dmclient can cope with malformed archive data, by exercising open and
+    load functions with malformed data and examining the exceptions thrown.
+    """
 
-    session = campaign.sessions[0]
-    assert session.start_time == dtparse("2016-04-20")
-    assert len(session.notes) == 0
+    def test_not_archive(self):
+        with pytest.raises(InvalidArchiveError):
+            open_archive("resources/test/notarchive.dmc")
 
-    session = campaign.sessions[1]
-    assert session.start_time == dtparse("2016-04-21")
-    assert len(session.notes) == 0
-    assert session.log == "This is what happened in the session!\n"
-
+    def test_corrupt_metadata(self):
+        with pytest.raises(InvalidArchiveMetadataError):
+            open_archive("resources/test/badmeta.dmc")

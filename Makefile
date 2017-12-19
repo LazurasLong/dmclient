@@ -89,7 +89,7 @@ ui_files=$(ui_files_:.ui=.py)
 
 test_archives=resources/test/protege/testcampaign.dmc \
 	      resources/test/protege/testlibrary.dml \
-	      resources/test/badsessiondata.dmc
+	      resources/test/badmeta.dmc
 
 
 # Primary targets.
