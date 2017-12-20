@@ -29,10 +29,9 @@ from campaign import Campaign, CampaignSession
 from campaign.battlemap import Map
 from core import filters
 from core.archive import InvalidArchiveError
-from core.archive import load_campaign
 from core.config import APP_NAME, BUG_URL, DONATE_URL
 from model.qt import SchemaTableModel
-from model.schema import CampaignPropertiesSchema, SessionPropertiesSchema
+from model.schema import SessionPropertiesSchema
 from ui import display_error, get_open_filename, ResourceDialogManager, \
     spacer_widget
 from ui.about import show as show_about
@@ -46,23 +45,6 @@ from ui.widgets.campaign.session import Ui_CampaignSession
 from ui.widgets.campaign.window import Ui_MainWindow
 
 log = getLogger(__name__)
-
-
-class NewCampaignDialog(QDialog, Ui_NewCampaignDialog):
-    def __init__(self, game_systems, options):
-        QDialog.__init__(self)
-        self.setupUi(self)
-        button = self.buttonBox.button(QDialogButtonBox.Ok)
-        button.setText("Create campaign!")
-        button.setIcon(QIcon(":/icons/logo.png"))
-        self.gameSystemList.setModel(game_systems)
-        self.gameSystemList.setModelColumn(1)
-        self.gameSystemList.addAction(self.newGameSystemRequested)
-        self.gameSystemList.setCurrentIndex(game_systems.index(0, 0))
-        self.options = options
-
-    def on_advancedOptions_clicked(self):
-        raise NotImplementedError
 
 
 class CampaignWindow(QMainWindow, Ui_MainWindow):
@@ -373,6 +355,23 @@ class TabController(QObject):
         stacked[0].setCurrentIndex(1)
 
 
+class NewCampaignDialog(QDialog, Ui_NewCampaignDialog):
+    def __init__(self, game_systems, options):
+        QDialog.__init__(self)
+        self.setupUi(self)
+        button = self.bb.button(QDialogButtonBox.Ok)
+        button.setText("Create campaign!")
+        button.setIcon(QIcon(":/icons/logo.png"))
+        self.game_systems.setModel(game_systems)
+        self.game_systems.setModelColumn(1)
+        self.game_systems.addAction(self.newGameSystemRequested)
+        self.game_systems.setCurrentIndex(game_systems.index(0, 0))
+        self.options = options
+
+    def on_advanced_options_clicked(self):
+        raise NotImplementedError
+
+
 class CampaignPropertiesDialog(QDialog, Ui_CampaignProperties):
     """View-controller for viewing high-level campaign properties:
     name, author, dates of creation/modification, list of modules.
@@ -386,9 +385,9 @@ class CampaignPropertiesDialog(QDialog, Ui_CampaignProperties):
         self.setupUi(self)
         self.removeSelectedModules.setEnabled(False)
 
-        self.model = SchemaTableModel(CampaignPropertiesSchema, Campaign,
-                                      data=[campaign])
-        self.mapper = schema_ui_map(CampaignPropertiesSchema, self.model, self)
+        # self.model = SchemaTableModel(CampaignPropertiesSchema, Campaign,
+        #                               data=[campaign])
+        # self.mapper = schema_ui_map(CampaignPropertiesSchema, self.model, self)
 
         self.setWindowTitle("%s properties" % campaign.name)
 

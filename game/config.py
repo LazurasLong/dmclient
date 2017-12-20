@@ -19,10 +19,12 @@ def reader(configfile):
             continue
         if not os.path.exists(path):
             log.warning("`%s' no longer exists on the filesystem "
-                        "(expected it to be at `%s')",
-                        system_id, path)
+                        "(expected it to be at `%s')", system_id, path)
             continue
-        yield UUID(system_id), path
+        try:
+            yield UUID(system_id), path
+        except ValueError:
+            log.warning("game system ID `%s' is malformed", id)
 
 
 def writer(configfile):

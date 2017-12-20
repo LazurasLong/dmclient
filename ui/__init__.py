@@ -16,10 +16,19 @@
 #
 import os
 
-from PyQt5.QtWidgets import QFileDialog, QMessageBox, QSizePolicy, QWidget
+from PyQt5.QtWidgets import *
 
 from core import filters
 from core.config import appconfig
+from ui.widgets.loading import Ui_LoadingWidget
+
+__all__ = [
+    "display_error",
+    "display_info",
+    "display_warning",
+    "LoadingWidget",
+    "LoadingWindow",
+]
 
 
 def display_error(parent, msg, title="Error"):
@@ -137,3 +146,40 @@ class ResourceDialogManager:  # FIXME: good idea, crap name
 
     def _get_id_for_index(self, qmodelindex):
         raise NotImplementedError
+
+
+class LoadingWidget(QWidget, Ui_LoadingWidget):
+    def __init__(self, parent=None):
+        QWidget.__init__(self, parent)
+        self.setupUi(self)
+        self.loading_label.setVisible(False)
+
+    def setText(self, text):
+        self.loading_label.setVisible(text != "")
+        self.loading_label.setText(text)
+
+    def update_progress(self, percent, text=None):
+        self.progressBar.setValue(percent)
+        if text:
+            self.setText(text)
+
+
+class LoadingWindow(QMainWindow):
+    def __init__(self, parent=None, loading_text=""):
+        super().__init__(parent)
+        self.task = None
+        widget = LoadingWidget(self)
+        widget.setText(loading_text)
+        self.setCentralWidget(widget)
+        self.setWindowTitle(loading_text if loading_text else "Loading...")
+
+    def set_task(self, task):
+        self.task = task
+        self.update_progress(0)
+
+    def set_task(self, task):
+        self.task = task
+        self.update_progress(0)
+
+    def update_progress(self, percent):
+        self.centralWidget().update_progress(percent)

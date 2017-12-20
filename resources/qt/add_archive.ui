@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>996</width>
-    <height>600</height>
+    <width>670</width>
+    <height>362</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -54,7 +54,7 @@
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,0,0,1,0,4">
        <item>
-        <widget class="QLabel" name="archiveName">
+        <widget class="QLabel" name="name">
          <property name="text">
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:18pt;&quot;&gt;&amp;lt;&amp;lt;do not localise&amp;gt;&amp;gt;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
@@ -97,7 +97,7 @@
           </widget>
          </item>
          <item row="1" column="1">
-          <widget class="QLabel" name="systemId">
+          <widget class="QLabel" name="game_system_id">
            <property name="text">
             <string>&lt;&lt;do not localise&gt;&gt;</string>
            </property>
@@ -114,7 +114,7 @@
           </widget>
          </item>
          <item row="2" column="1">
-          <widget class="QLabel" name="dateCreated">
+          <widget class="QLabel" name="creation_date">
            <property name="text">
             <string>&lt;&lt;do not localise&gt;&gt;</string>
            </property>
@@ -131,7 +131,7 @@
           </widget>
          </item>
          <item row="3" column="1">
-          <widget class="QLabel" name="revisionDate">
+          <widget class="QLabel" name="revision_date">
            <property name="text">
             <string>&lt;&lt;do not localise&gt;&gt;</string>
            </property>

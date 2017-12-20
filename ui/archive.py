@@ -63,14 +63,21 @@ class LicenseConfirmationDialog(QDialog, Ui_LicenseConfirmationDialog):
         dlg.exec_()
 
 
-# TODO: Turn this into a SchemaMap dialog.
 class ArchiveDialog(QDialog, Ui_ArchiveViewer):
-    def __init__(self, parent, archive_path):
+    def __init__(self, parent, archive_meta):
         QDialog.__init__(self, parent)
-        self.archive_path = archive_path
         self.setupUi(self)
         self.buttonBox.button(QDialogButtonBox.Ok).setText("Add Archive"),
         self.buttonBox.accepted.connect(self.on_add_archive)
+        self._bind(archive_meta)
+        has_isbn = archive_meta["isbn"]
+        self.isbnLabel.setVisible(has_isbn)
+        self.isbn.setVisible(has_isbn)
+
+    def _bind(self, d):
+        for k, v in d.items():
+            w = getattr(self, k)
+            w.setText(v)
 
     def on_add_archive(self):
         dlg = LicenseConfirmationDialog(self)

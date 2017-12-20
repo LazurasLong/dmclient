@@ -17,22 +17,35 @@
 
 from datetime import datetime
 
+from sqlalchemy import String, Column, Integer
+
+from model import Base, AssetMixin
+
+
+class Note:
+    pass
+
+
+class Player(Base, AssetMixin):
+    __tablename__ = "players"
+
+    kills = Column(Integer)
+
 
 class Campaign:
-    def __init__(self, id,
-                 name="Untitled campaign",
-                 author="",
-                 game_system_id=None,
-                 description="",
-                 creation_date=None,
-                 revision_date=None):
+    """
+    Because campaigns consist of data that extent far beyond the database,
+    ``Campaign``s are not implemented using SQL, instead as plain-old Python
+    instances.
+    """
+    def __init__(self, id):
         self.id = id
-        self.name = name
-        self.author = author
-        self.game_system_id = game_system_id
-        self.description = description
-        self.creation_date = creation_date
-        self.revision_date = revision_date
+        self.name = "Untitled campaign"
+        self.author = "Unknown"
+        self.game_system_id = "GAME"
+        self.description = ""
+        self.creation_date = datetime.now()
+        self.revision_date = datetime.now()
         self.players = {}
         self.sessions = []
         self.documents = []

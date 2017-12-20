@@ -27,6 +27,8 @@ import tarfile
 from json import JSONDecodeError
 from logging import getLogger
 
+from sqlalchemy import Column, String
+
 from model import DescribableMixin, Base
 from model.schema import *
 
@@ -59,11 +61,43 @@ def open_campaign(path):
 
 
 def open_archive(path):
+    schema = ArchiveMetaSchema()
     return ArchiveMeta.load(path)
 
 
 def load_archive(meta):
     return None
+
+
+class ArchiveMeta:
+    def __init__(self, id, game_system_id, name="", description="", author="",
+                 creation_date=None, revision_date=None, isbn=None,
+                 last_seen_path=None):
+        self.id = id
+        self.game_system_id = game_system_id
+        self.name = name
+        self.description = description
+        self.author = author
+        self.creation_date = creation_date
+        self.revision_date = revision_date
+        self.isbn = isbn
+        self.last_seen_path = last_seen_path
+
+    @classmethod
+    def load(cls, path):
+        """
+        :return: An ``ArchiveMeta`` instance.
+        :raises: InvalidArchiveMetadataError
+        """
+        try:
+            with tarfile.open(path, "r:bz2") as tf:
+                meta = _parse_json(tf.extractfile("properties.json"),
+                                   ArchiveMetaSchema)
+                meta.last_seen_path = path
+                return meta
+        except (tarfile.ReadError, EOFError, JSONDecodeError):
+            raise InvalidArchiveMetadataError(
+                "invalid archive meta {}".format(path))
 
 
 class ArchiveMetaSchema(Schema):
@@ -82,6 +116,11 @@ class ArchiveMetaSchema(Schema):
     author = fields.Str(default="")
     creation_date = fields.DateTime(format="iso")
     revision_date = fields.DateTime(format="iso")
+    isbn = fields.Str(default="")
+
+    @post_load
+    def make_meta(self, m):
+        return ArchiveMeta(**m)
 
 
 def _parse_json(f, schemacls):
@@ -106,7 +145,11 @@ class InvalidArchiveMetadataError(InvalidArchiveError):
     pass
 
 
-class ArchiveMeta(Base, DescribableMixin):
+class ArchiveMetaSql(Base, DescribableMixin):
+    __tablename__ = "archives"
+
+    isbn = Column(String)
+
     def __init__(self, tarfile, path):
         """
 
@@ -115,21 +158,3 @@ class ArchiveMeta(Base, DescribableMixin):
         """
         self.tarfile = tarfile
         self.path = path
-
-    @classmethod
-    def load(cls, path):
-        """
-        :return: An ``ArchiveMeta`` instance.
-        :raises: InvalidArchiveMetadataError
-        """
-        try:
-            tf = tarfile.open(path, "r:bz2")
-            properties = _parse_json(tf.extractfile("properties.json"),
-                                     ArchiveMetaSchema)
-            meta = cls(tf, path)
-            for prop, val in properties.items():
-                setattr(meta, prop, val)
-            return meta
-        except (tarfile.ReadError, EOFError, JSONDecodeError):
-            raise InvalidArchiveMetadataError(
-                "invalid archive meta {}".format(path))

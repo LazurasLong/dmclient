@@ -20,6 +20,8 @@ from logging import getLogger
 from PyQt5.QtCore import QObject, QTimer, pyqtSlot
 from PyQt5.QtGui import QIcon, QStandardItem
 from PyQt5.QtWidgets import QMenu
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 from core import filters
 from model.tree import DictNode, ListNode, Node, NodeFactory, TreeModel
@@ -132,26 +134,26 @@ class SearchController(QObject):
 
 
 class NoteController(QObject):
-    def __init__(self, view):
+    def __init__(self, cc):
         """
 
         :param view:  Ugh, because Qt is weird. And all of the
         QActions are defined there. Some refactoring is probably needed.
         """
+        view = cc.view
         super().__init__(view)
         self.view = view
         self.tree_node = ListNode(icon=QIcon(":/icons/books.png"),
-                                  text="Documents",
-                                  delegate=self)
+                                  text="Documents", delegate=self)
         view.import_document.triggered.connect(self.on_import_document)
-        view.add_external_document.triggered.connect(self.on_add_external_document)
+        view.add_external_document.triggered.connect(
+            self.on_add_external_document)
         view.remove_document.triggered.connect(self.on_remove_document)
         # search_node.apply(self.delphi.documents)
 
     def context_menu(self):
         window = self.view
-        return [window.import_document,
-                window.add_external_document,
+        return [window.import_document, window.add_external_document,
                 window.remove_document]
 
     def item_context_menu(self):
@@ -178,9 +180,10 @@ class NoteController(QObject):
 
 
 class MapController(QObject):
-    def __init__(self, campaign_window):
-        super().__init__(campaign_window)
-        self.campaign_window = campaign_window
+    def __init__(self, cc):
+        view = cc.view
+        super().__init__(view)
+        self.campaign_window = view
         map_node_factory = NodeFactory(action=self.show_map)
 
         region = DictNode(text="Regional", child_factory=map_node_factory)
@@ -188,8 +191,7 @@ class MapController(QObject):
         encounter = DictNode(text="Encounters", child_factory=map_node_factory)
         # encounter.apply(campaign.encounter_maps)
 
-        self.tree_node = Node(icon=QIcon(":/icons/maps.png"),
-                              text="Maps",
+        self.tree_node = Node(icon=QIcon(":/icons/maps.png"), text="Maps",
                               delegate=self)
         self.tree_node.add_child(region)
         self.tree_node.add_child(encounter)
@@ -211,7 +213,8 @@ class MapController(QObject):
 
 
 class PlayerController(QObject):
-    def __init__(self, view):
+    def __init__(self, cc):
+        view = cc.view
         super().__init__(view)
         self.tree_node = ListNode(text="Players",
                                   icon=QIcon(":/icons/party.png"),
@@ -219,7 +222,8 @@ class PlayerController(QObject):
 
 
 class SessionController(QObject):
-    def __init__(self, view):
+    def __init__(self, cc):
+        view = cc.view
         super().__init__(view)
         icon = QIcon(":/icons/sessions.png")
         session_node_factory = NodeFactory(action=self.show_session, icon=icon)
@@ -232,47 +236,54 @@ class SessionController(QObject):
 
 class CampaignController:
     def __init__(self, campaign, delphi):
+        self._engine = None
+        self._Session = None
         self.campaign = campaign
+
         self.delphi = delphi
 
         # FIXME this does not belong here...
         self.delphi.init_database(campaign.id)
 
         self.view = CampaignWindow(self.campaign)
-        # blah blah pycharm
-        self.map_controller = \
-            self.player_controller = \
-            self.session_controller = \
-            self.search_controller = None
-        self._init_subcontrollers(self.view)
+        self.map_controller = None
+        self.player_controller = None
+        self.session_controller = None
+        self.search_controller = None
+        self._init_subcontrollers()
 
         asset_tree = self.build_asset_tree(self.campaign)
-        model = self.asset_tree_model = TreeModel(asset_tree)
+        self.asset_tree_model = TreeModel(asset_tree)
 
-        self.view.assetTree.setModel(model)
-        self.view.assetTree.doubleClicked.connect(lambda x: self.asset_tree_doubleclick(x))
-        self.view.assetTree.customContextMenuRequested.connect(self.asset_tree_context_menu_requested)
+        self._init_view()
 
-    def _init_subcontrollers(self, view):
-        self.map_controller = MapController(view)
-        self.player_controller = PlayerController(view)
-        self.note_controller = NoteController(view)
-        self.session_controller = SessionController(view)
+    def _init_db(self, campaign_db_path):
+        self._engine = create_engine("sqlite://{}".format(campaign_db_path))
+        self._Session = sessionmaker(engine=self._engine)
+
+    def _init_subcontrollers(self):
+        self.map_controller = MapController(self)
+        self.player_controller = PlayerController(self)
+        self.note_controller = NoteController(self)
+        self.session_controller = SessionController(self)
 
         self.search_controller = SearchController(self.delphi,
                                                   SearchCompleter())
-        sc = self.search_controller  # gross scan/readability, fixme
-        view.searchEdit.textChanged.connect(sc.on_search_text_changed)
-        view.searchEdit.returnPressed.connect(sc.on_search_requested)
+
+    def _init_view(self):
+        sc = self.search_controller
+        v = self.view
+        v.searchEdit.textChanged.connect(sc.on_search_text_changed)
+        v.searchEdit.returnPressed.connect(sc.on_search_requested)
+        v.assetTree.setModel(self.asset_tree_model)
+        v.assetTree.doubleClicked.connect(lambda x: self.asset_tree_doubleclick(x))
+        v.assetTree.customContextMenuRequested.connect(self.asset_tree_context_menu_requested)
 
     def build_asset_tree(self, campaign):
         root = Node()
-        root.add_children([controller.tree_node
-                           for controller in
-                           [self.map_controller,
-                            self.session_controller,
-                            self.player_controller,
-                            self.note_controller]])
+        root.add_children([controller.tree_node for controller in
+                           [self.map_controller, self.session_controller,
+                            self.player_controller, self.note_controller]])
         return root
 
     def window_moved(self):

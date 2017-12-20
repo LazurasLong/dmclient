@@ -5,9 +5,6 @@ Base = declarative_base()
 
 
 class DescribableMixin:
-    def __tablename__(cls):
-        return cls.__name__.lower()
-
     id = Column(Integer, primary_key=True)
     name = Column(String)
     description = Column(String)
@@ -24,3 +21,7 @@ class DateMixin:
     def __init__(self, creation, modification):
         self.creation_date = creation
         self.modification_date = modification
+
+
+class AssetMixin(DescribableMixin, DateMixin):  # TODO better name
+    pass
