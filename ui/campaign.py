@@ -18,6 +18,7 @@
 """Qt-specific main campaign window and some supporting dialogs."""
 
 import webbrowser
+from datetime import datetime
 from logging import getLogger
 
 from PyQt5.QtCore import Qt, pyqtSlot
@@ -57,7 +58,6 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
         self.statusbar.showMessage("Welcome to %s" % APP_NAME)
         self.setWindowTitle(campaign.name)
 
-        self._init_dialogs(campaign)
         self.tab_controller = TabController(self.tabWidget)
         self._init_asset_tree()
         self._init_session_list(campaign)
@@ -69,12 +69,6 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
         self.complain.triggered.connect(
             lambda: webbrowser.open(BUG_URL))
         self.about.triggered.connect(show_about)
-
-    def _init_dialogs(self, campaign):
-        self._campaign_properties = CampaignPropertiesDialog(campaign, self)
-        self.campaign_properties.triggered.connect(
-            self._campaign_properties.show)
-        # self._campaign_properties.accepted.connect(self.on_properties_change)
 
     def _init_asset_tree(self):
         self.assetTree = QTreeView()
@@ -296,8 +290,9 @@ class CampaignPropertiesDialog(QDialog, Ui_CampaignProperties):
     def options(self):
         return {"name": self.name.text(),
                 "author": self.author.text(),
-                "creation_date": self.creation_date.dateTime(),
-                "description": self.description}
+                "creation_date": self.creation_date.dateTime().toPyDateTime(),
+                "revision_date": datetime.now(),
+                "description": self.description.toPlainText()}
 
 
 class CampaignSessionDialog(QDialog, Ui_CampaignSession):

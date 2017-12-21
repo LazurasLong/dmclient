@@ -30,7 +30,7 @@ from model.tree import DictNode, ListNode, Node, NodeFactory, TreeModel
 from ui import get_open_filename
 from ui.battlemap.controls import ControlScheme
 from ui.battlemap.widgets import RegionalMapView
-from ui.campaign import CampaignWindow
+from ui.campaign import CampaignWindow, CampaignPropertiesDialog
 from ui.search import SearchCompleter
 
 log = getLogger(__name__)
@@ -280,11 +280,15 @@ class CampaignController:
     def _init_view(self):
         sc = self.search_controller
         v = self.view
+
         v.searchEdit.textChanged.connect(sc.on_search_text_changed)
         v.searchEdit.returnPressed.connect(sc.on_search_requested)
+
         v.assetTree.setModel(self.asset_tree_model)
         v.assetTree.doubleClicked.connect(lambda x: self.asset_tree_doubleclick(x))
         v.assetTree.customContextMenuRequested.connect(self.asset_tree_context_menu_requested)
+
+        v.campaign_properties.triggered.connect(self.on_campaign_properties)
 
     def build_asset_tree(self, campaign):
         root = Node()
@@ -315,3 +319,16 @@ class CampaignController:
         for action in controller.context_menu():
             context_menu.addAction(action)
         context_menu.exec(controller.view.mapToGlobal(point))
+
+    def on_campaign_properties(self):
+        dlg = self.properties_dialog = CampaignPropertiesDialog(self.campaign,
+                                                                self.view)
+        dlg.accepted.connect(self.on_properties_update)
+        dlg.show()
+
+    def on_properties_update(self):
+        options = self.properties_dialog.options
+        for k, v in options.items():
+            setattr(self.campaign, k, v)
+        self.view.setWindowTitle(self.campaign.name)
+        self.properties_dialog = None
