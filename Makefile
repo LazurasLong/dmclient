@@ -41,6 +41,8 @@ endif
 
 # Recipe configuration
 
+RM=rm -f
+
 PYUIC=pyuic5
 PYUICFLAGS=
 
