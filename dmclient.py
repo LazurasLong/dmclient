@@ -55,10 +55,6 @@ def parse_args(argv):
         prog=APP_NAME,
         description=APP_DESCRIPTION,
     )
-    parser.add_argument("-c, --campaign",
-                        help="open CAMPAIGN on startup",
-                        metavar="FILE",
-                        dest="campaign_path")
     parser.add_argument("--disable-oracle",
                         action="store_true",
                         help="Disable the multi-process search indexer.")
@@ -74,6 +70,9 @@ def parse_args(argv):
                         type=LoggerSpec,
                         default=[],
                         nargs='+')
+    parser.add_argument("campaign",
+                        nargs='?',
+                        help="open CAMPAIGN on startup")
     return parser.parse_args(argv)
 
 
@@ -170,8 +169,8 @@ def main():
         from core.app import AppController
         app_controller = AppController(_app, delphi)
 
-        if args.campaign_path:
-            app_controller.load_campaign(args.campaign_path)
+        if args.campaign:
+            app_controller.load_campaign(args.campaign)
         elif config.open_last_campaign and config.last_campaign_path:
             app_controller.load_campaign(config.last_campaign_path)
         else:
@@ -191,8 +190,9 @@ def main():
         if app_controller:
             app_controller.shutdown()
         save_config(appconfig())
-        log.debug("goodbye")
-        logging.shutdown()
+        if log:  # None if there was a CLI error
+            log.debug("goodbye")
+            logging.shutdown()
 
 
 if __name__ == '__main__':
