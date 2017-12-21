@@ -269,9 +269,6 @@ class SchemaTableModel(AbstractQtModel, QAbstractTableModel):
         self._header_decorations = [QVariant()] * len(self._header)
         self.readonly = readonly
 
-        log.debug("Instantiated a new SchemaTableModel for %s (%d cols)",
-                  str(itemcls), len(self._header))
-
     def __repr__(self):
         return "<SchemaTableModel(schema={}, " \
                "size=({},{}))>".format(self.schema,
@@ -309,8 +306,6 @@ class SchemaTableModel(AbstractQtModel, QAbstractTableModel):
 
     def data(self, index, role=Qt.DisplayRole):
         # FIXME: this method is trash.
-        log.debug("%s::data(%s, %d)", self, index, role)
-
         if not index.isValid():
             return QVariant()
         if len(self) <= index.row() or len(self._header) <= index.column():
@@ -332,7 +327,6 @@ class SchemaTableModel(AbstractQtModel, QAbstractTableModel):
         return data
 
     def setData(self, index, value, role=Qt.EditRole):
-        log.debug("%s::setData(%s, %s, %s)", self, index, value, role)
         if self.readonly:
             return False
         _value = value
