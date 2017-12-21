@@ -42,7 +42,7 @@ class GameSystemManager:
         game_system_id = archive_meta.game_system_id
         if game_system_id in [game_system.id for game_system in self.systems]:
             raise ExistingLibraryError(path, game_system_id)
-        game_system = GameSystem(0, archive_meta.name)
+        game_system = GameSystem(game_system_id, archive_meta.name)
         self.systems.append(game_system)
         self._last_path[game_system.id] = path
 
@@ -51,14 +51,14 @@ class GameSystemManager:
         last_seen_at = {}
         with open(config_path) as config_file:
             reader = game.config.reader(config_file)
-            for id, path in reader:
+            for id_, path in reader:
                 try:
                     meta = ArchiveMeta.load(path)
                     self.add_gamesystem(meta)
                 # bleh
                 except (
                 OSError, InvalidArchiveError, ExistingLibraryError) as e:
-                    log.warning("game system `%s' (at `%s') is invalid: %s", id,
+                    log.warning("game system `%s' (at `%s') is invalid: %s", id_,
                                 path, e)
 
         return game_systems, last_seen_at
@@ -138,8 +138,8 @@ class AppController(QObject):
         if not path:
             return
         try:
-            with archive.open_library(path) as ar:
-                self.games.add_gamesystem(ar)
+            meta = open_archive(path)
+            self.games.add_gamesystem(meta)
         except (OSError, InvalidArchiveError) as e:
             log.error("failed to load game system: %s", e)
             display_error(self.new_campaign_dialog,

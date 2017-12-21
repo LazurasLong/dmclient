@@ -22,9 +22,9 @@ def reader(configfile):
                         "(expected it to be at `%s')", system_id, path)
             continue
         try:
-            yield UUID(system_id), path
+            yield system_id, path
         except ValueError:
-            log.warning("game system ID `%s' is malformed", id)
+            log.warning("game system ID `%s' is malformed", system_id)
 
 
 def writer(configfile):
