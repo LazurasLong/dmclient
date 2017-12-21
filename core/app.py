@@ -147,6 +147,7 @@ class AppController(QObject):
         try:
             meta = open_archive(path)
             self.games.add_gamesystem(meta)
+            self.main_window.enable_create()
         except (OSError, InvalidArchiveError) as e:
             log.error("failed to load game system: %s", e)
             display_error(self.new_campaign_dialog,

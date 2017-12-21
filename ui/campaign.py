@@ -247,12 +247,18 @@ class NewCampaignDialog(QDialog, Ui_NewCampaignDialog):
         button = self.bb.button(QDialogButtonBox.Ok)
         button.setText("Create campaign!")
         button.setIcon(QIcon(":/icons/logo.png"))
+        button.setEnabled(0 < len(game_systems))
         self.game_systems.setSelectionMode(QAbstractItemView.SingleSelection)
         self.game_systems.setModel(game_systems)
         self.game_systems.setModelColumn(1)
         self.game_systems.addAction(self.newGameSystemRequested)
         self.game_systems.setCurrentIndex(game_systems.index(0, 1))
         self._options = options
+
+    def enable_create(self):
+        button = self.bb.button(QDialogButtonBox.Ok)
+        button.setEnabled(True)
+        self.game_systems.setCurrentIndex(self.game_systems.model().index(0, 1))  # FIXME hack
 
     @property
     def options(self):
