@@ -285,12 +285,19 @@ class CampaignPropertiesDialog(QDialog, Ui_CampaignProperties):
         self.setupUi(self)
         self.setModal(True)
         self.removeSelectedModules.setEnabled(False)
-
-        # self.model = SchemaTableModel(CampaignPropertiesSchema, Campaign,
-        #                               data=[campaign])
-        # self.mapper = schema_ui_map(CampaignPropertiesSchema, self.model, self)
-
         self.setWindowTitle("%s properties" % campaign.name)
+        self.name.setText(campaign.name)
+        self.author.setText(campaign.author)
+        self.creation_date.setDate(campaign.creation_date)
+        self.revision_date.setText(str(campaign.revision_date))
+        self.description.setPlainText(campaign.description)
+
+    @property
+    def options(self):
+        return {"name": self.name.text(),
+                "author": self.author.text(),
+                "creation_date": self.creation_date.dateTime(),
+                "description": self.description}
 
 
 class CampaignSessionDialog(QDialog, Ui_CampaignSession):

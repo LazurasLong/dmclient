@@ -164,8 +164,10 @@ class AppController(QObject):
         cid = generate_uuid()
         game_system = self.games.get(options["game_system"])
         campaign = Campaign(cid, game_system)
-        if options["name"]:
-            campaign.name = options["name"]
+        for attr in ["name", "author"]:
+            option = options[attr]
+            if option:
+                setattr(campaign, attr, option)
 
         self._init_cc(campaign)
 
