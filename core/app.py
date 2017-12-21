@@ -150,7 +150,7 @@ class AppController(QObject):
             self.main_window.enable_create()
         except (OSError, InvalidArchiveError) as e:
             log.error("failed to load game system: %s", e)
-            display_error(self.new_campaign_dialog,
+            display_error(self.main_window,
                           "The archive file could not be read.")
         except ExistingLibraryError as e:
             display_error(self.main_window,
