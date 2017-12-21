@@ -247,14 +247,26 @@ class NewCampaignDialog(QDialog, Ui_NewCampaignDialog):
         button = self.bb.button(QDialogButtonBox.Ok)
         button.setText("Create campaign!")
         button.setIcon(QIcon(":/icons/logo.png"))
+        self.game_systems.setSelectionMode(QAbstractItemView.SingleSelection)
         self.game_systems.setModel(game_systems)
         self.game_systems.setModelColumn(1)
         self.game_systems.addAction(self.newGameSystemRequested)
-        self.game_systems.setCurrentIndex(game_systems.index(0, 0))
-        self.options = options
+        self.game_systems.setCurrentIndex(game_systems.index(0, 1))
+        self._options = options
 
-    def on_advanced_options_clicked(self):
-        raise NotImplementedError
+    @property
+    def options(self):
+        options = self._options
+        options["name"] = self.campaign_name.text()
+        options["author"] = self.author_name.text()
+        options["game_system"] = self._get_selected_gamesystem_id()
+        return options
+
+    def _get_selected_gamesystem_id(self):
+        model = self.game_systems.model()
+        selected = self.game_systems.selectedIndexes()[0].row()
+        game_system_id = model.data(model.index(selected, 0))
+        return game_system_id
 
 
 class CampaignPropertiesDialog(QDialog, Ui_CampaignProperties):

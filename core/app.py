@@ -70,6 +70,17 @@ class GameSystemManager:
                 path = self._last_path[system.id]
                 writer.write_system(system, path)
 
+    def get(self, id):
+        """
+        Return the game system associated with ``id``, or raise ``KeyError`` if
+        the id is not associated with a game system.
+        """
+        # ugh
+        for system in self.systems:
+            if system.id == id:
+                return system
+        raise KeyError
+
 
 class LoadCampaignTask(QRunnable):
     """
@@ -97,10 +108,6 @@ class LoadCampaignTask(QRunnable):
             core.config.appconfig().last_campaign_path = path
         except (OSError, InvalidArchiveError) as e:
             log.error("Cannot load campaign: %s", error.exception)
-
-    @staticmethod
-    def temp_path(campaign_id):
-        return os.path.join(TEMP_DIR, campaign_id)
 
 
 class AppController(QObject):
@@ -155,13 +162,16 @@ class AppController(QObject):
         self._clear_main_window()
 
         cid = generate_uuid()
-        campaign = Campaign(cid)
+        game_system = self.games.get(options["game_system"])
+        campaign = Campaign(cid, game_system)
+        if options["name"]:
+            campaign.name = options["name"]
 
         self._init_cc(campaign)
 
     def load_campaign(self, path):
         assert self.main_window is None
-        self.main_window = LoadingWindow(loading_text="Loading campaign...")
+        self.main_window = LoadingDialog(loading_text="Loading campaign...")
         task = LoadCampaignTask(path, self.main_window.update_progress,
                                 self._on_campaign_loaded)
         self.main_window.set_task(task)

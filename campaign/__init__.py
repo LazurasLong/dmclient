@@ -38,11 +38,11 @@ class Campaign:
     ``Campaign``s are not implemented using SQL, instead as plain-old Python
     instances.
     """
-    def __init__(self, id):
+    def __init__(self, id, game_system):
         self.id = id
+        self.game_system = game_system
         self.name = "Untitled campaign"
         self.author = "Unknown"
-        self.game_system_id = "GAME"
         self.description = ""
         self.creation_date = datetime.now()
         self.revision_date = datetime.now()
