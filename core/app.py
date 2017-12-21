@@ -153,8 +153,7 @@ class AppController(QObject):
             display_error(self.new_campaign_dialog,
                           "The archive file could not be read.")
         except ExistingLibraryError as e:
-            # FIXME this error message is trash
-            display_error(self.new_campaign_dialog,
+            display_error(self.main_window,
                           "Cannot add duplicate game system with id `{}'".format(
                               e.game_system_id))
 
