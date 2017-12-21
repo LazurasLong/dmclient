@@ -373,16 +373,14 @@ class NewCampaignDialog(QDialog, Ui_NewCampaignDialog):
 
 
 class CampaignPropertiesDialog(QDialog, Ui_CampaignProperties):
-    """View-controller for viewing high-level campaign properties:
-    name, author, dates of creation/modification, list of modules.
-
-    The associated Designer file is resources/campaign_properties.ui
-
+    """
+    Unfortunately, this dialog is modal due to some lazily imposed restrictions.
     """
 
     def __init__(self, campaign, parent):
         QDialog.__init__(self, parent)
         self.setupUi(self)
+        self.setModal(True)
         self.removeSelectedModules.setEnabled(False)
 
         # self.model = SchemaTableModel(CampaignPropertiesSchema, Campaign,
