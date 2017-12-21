@@ -65,8 +65,9 @@ def open_archive(path):
     return ArchiveMeta.load(path)
 
 
-def load_archive(meta):
-    return None
+def unpack_archive(meta, destination):
+    with tarfile.open(meta.last_seen_path, "r:bz2") as f:
+        f.extractall(destination)
 
 
 class ArchiveMeta:

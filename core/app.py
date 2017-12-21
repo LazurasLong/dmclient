@@ -1,7 +1,8 @@
 import os
 from logging import getLogger
 
-from PyQt5.QtCore import QTimer, pyqtSlot, QRunnable, QThreadPool, QObject
+from PyQt5.QtCore import QTimer, pyqtSlot, QRunnable, QThreadPool, QObject, \
+    QThread
 
 import core.config
 import game.config
@@ -9,7 +10,7 @@ from campaign import Campaign
 from campaign.controller import CampaignController
 from core import filters, generate_uuid
 from core.archive import PropertiesSchema, InvalidArchiveError, open_archive, \
-    ArchiveMeta
+    ArchiveMeta, unpack_archive
 from game import GameSystem
 from model.qt import SchemaTableModel
 from ui import display_error, get_open_filename, LoadingDialog
@@ -85,27 +86,29 @@ class LoadCampaignTask(QRunnable):
     This is sort of like a future, in that it has a ``result``.
     """
 
-    def __init__(self, path, cb, done_cb):
+    def __init__(self, archive_path, cb, done_cb):
         super().__init__()
-        self.meta = path
+        self.archive_path = archive_path
         self.cb = cb
         self.done_cb = done_cb
-        self.result = "foo"
+        self.result = None
+        self.exception = None
 
     @pyqtSlot()
     def run(self):
         try:
-            self.result = "/:memory:"
-            self.done_cb()
-            return
-
-            meta = open_archive(path)
-
-            campaign = load_campaign(path)
-            self.on_campaign_loaded(campaign)
-            core.config.appconfig().last_campaign_path = path
-        except (OSError, InvalidArchiveError) as e:
-            log.error("Cannot load campaign: %s", error.exception)
+            self.cb(5)
+            meta = open_archive(self.archive_path)
+            self.cb(15)
+            destination = CampaignController.working_directory(meta)
+            unpack_archive(meta, destination)
+            self.cb(80)
+            self.result = meta, destination
+        except Exception as e:
+            self.exception = e
+        else:
+            core.config.appconfig().last_campaign_path = self.archive_path
+        self.done_cb()
 
 
 class AppController(QObject):
@@ -166,8 +169,8 @@ class AppController(QObject):
             option = options[attr]
             if option:
                 setattr(campaign, attr, option)
-
-        self._init_cc(campaign)
+        campaign_db_path = CampaignController.database_path(campaign)
+        self._init_cc(campaign, campaign_db_path)
 
     def load_campaign(self, path):
         assert self.main_window is None
@@ -184,28 +187,31 @@ class AppController(QObject):
 
     @pyqtSlot()
     def on_campaign_loaded(self):
-        campaign_path = self.main_window.task.result
-        if not campaign_path:
+        result = self.main_window.task.result
+        if not result:
+            log.exception("failed to load campaign: %s", self.main_window.task.exception)
             display_error(self.main_window, "The campaign could not be loaded.")
             self.show_new_campaign()
             return
+        meta, campaign_path = result
         self._clear_main_window()
-
-        campaign = self._create_campaign(campaign_path)
-
-        self._init_cc(campaign)
+        campaign = self._create_campaign(meta)
+        campaign_db_path = CampaignController.database_path(campaign)
+        self._init_cc(campaign, campaign_db_path)
 
     def _clear_main_window(self):
         self.main_window.hide()
         self.main_window.destroy()
         self.main_window = None
 
-    def _create_campaign(self, campaign_path):
-        return Campaign(0)
+    def _create_campaign(self, meta):
+        game_system = self.games.get(meta.game_system_id)
+        return Campaign(meta.id, game_system)
 
-    def _init_cc(self, campaign):
+    def _init_cc(self, campaign, campaign_db_path):
         assert self.main_window is None
         controller = CampaignController(campaign, self.delphi)
+        controller.init_db(campaign_db_path)
         window = controller.view
         window.show()
         window.raise_()

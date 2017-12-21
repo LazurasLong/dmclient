@@ -17,6 +17,7 @@
 
 from logging import getLogger
 
+import os
 from PyQt5.QtCore import QObject, QTimer, pyqtSlot
 from PyQt5.QtGui import QIcon, QStandardItem
 from PyQt5.QtWidgets import QMenu
@@ -24,6 +25,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from core import filters
+from core.config import TMP_PATH
 from model.tree import DictNode, ListNode, Node, NodeFactory, TreeModel
 from ui import get_open_filename
 from ui.battlemap.controls import ControlScheme
@@ -257,7 +259,20 @@ class CampaignController:
 
         self._init_view()
 
-    def _init_db(self, campaign_db_path):
+    @staticmethod
+    def working_directory(campaign):
+        """
+        Return an absolute path to the working directory for the campaign,
+        usually `TEMP_DIR/{campaign.id}/`.
+        """
+        return os.path.join(TMP_PATH, str(campaign.id))
+
+    @staticmethod
+    def database_path(campaign):
+        return os.path.join(CampaignController.working_directory(campaign),
+                            "database.sqlite")
+
+    def init_db(self, campaign_db_path):
         self._engine = create_engine("sqlite://{}".format(campaign_db_path))
         self._Session = sessionmaker(engine=self._engine)
 
