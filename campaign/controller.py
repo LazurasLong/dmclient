@@ -137,11 +137,6 @@ class SearchController(QObject):
 
 class NoteController(QObject):
     def __init__(self, cc):
-        """
-
-        :param view:  Ugh, because Qt is weird. And all of the
-        QActions are defined there. Some refactoring is probably needed.
-        """
         view = cc.view
         super().__init__(view)
         self.view = view
@@ -238,11 +233,12 @@ class SessionController(QObject):
 
 class CampaignController:
     def __init__(self, campaign, delphi):
-        self._engine = None
-        self._Session = None
         self.campaign = campaign
-
         self.delphi = delphi
+
+        campaign_db_path = self.database_path(campaign)
+        self._engine = create_engine("sqlite://{}".format(campaign_db_path))
+        self._Session = sessionmaker(engine=self._engine)
 
         # FIXME this does not belong here...
         self.delphi.init_database(campaign.id)
@@ -271,10 +267,6 @@ class CampaignController:
     def database_path(campaign):
         return os.path.join(CampaignController.working_directory(campaign),
                             "database.sqlite")
-
-    def init_db(self, campaign_db_path):
-        self._engine = create_engine("sqlite://{}".format(campaign_db_path))
-        self._Session = sessionmaker(engine=self._engine)
 
     def _init_subcontrollers(self):
         self.map_controller = MapController(self)

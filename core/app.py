@@ -32,10 +32,12 @@ class GameSystemManager:
         self._last_path = {}
 
     def add_gamesystem(self, archive_meta):
-        """Register a game system on the filesystem.
+        """
+        Register a game system on the filesystem.
 
-        :param archive:
-        :raises: ExistingLibraryError if the game system ID is already registered
+        :param archive_meta:
+        :raises: ExistingLibraryError if the game system ID is already
+        registered
         """
         path = archive_meta.last_seen_path
         game_system_id = archive_meta.game_system_id
@@ -69,14 +71,14 @@ class GameSystemManager:
                 path = self._last_path[system.id]
                 writer.write_system(system, path)
 
-    def get(self, id):
+    def get(self, id_):
         """
         Return the game system associated with ``id``, or raise ``KeyError`` if
         the id is not associated with a game system.
         """
         # ugh
         for system in self.systems:
-            if system.id == id:
+            if system.id == id_:
                 return system
         raise KeyError
 
@@ -110,6 +112,7 @@ class LoadCampaignTask(QRunnable):
             core.config.appconfig().last_campaign_path = self.archive_path
         self.done_cb()
 
+
 def shutdown_method(f):
     """
     A decorator that offers a safety harness: if the function ``f`` throws,
@@ -125,6 +128,7 @@ def shutdown_method(f):
         except OSError as e:
             log.exception("failed to shutdown: %s", e)
     return wrapped
+
 
 class AppController(QObject):
     game_config_path = os.path.join(core.config.CONFIG_PATH, "gamesystems")
@@ -184,8 +188,9 @@ class AppController(QObject):
             option = options[attr]
             if option:
                 setattr(campaign, attr, option)
-        campaign_db_path = CampaignController.database_path(campaign)
-        self._init_cc(campaign, campaign_db_path)
+        campaign_wd = CampaignController.working_directory(campaign)
+        os.mkdir(campaign_wd)
+        self._init_cc(campaign)
 
     def load_campaign(self, path):
         assert self.main_window is None
@@ -211,8 +216,7 @@ class AppController(QObject):
         meta, campaign_path = result
         self._clear_main_window()
         campaign = self._create_campaign(meta)
-        campaign_db_path = CampaignController.database_path(campaign)
-        self._init_cc(campaign, campaign_db_path)
+        self._init_cc(campaign)
 
     def _clear_main_window(self):
         self.main_window.hide()
@@ -223,11 +227,10 @@ class AppController(QObject):
         game_system = self.games.get(meta.game_system_id)
         return Campaign(meta.id, game_system)
 
-    def _init_cc(self, campaign, campaign_db_path):
+    def _init_cc(self, campaign):
         assert self.main_window is None
         # TODO: Ensure that the previous campaign was flushed out (i.e., tmp)
         cc = self.cc = CampaignController(campaign, self.delphi)
-        cc.init_db(campaign_db_path)
         window = cc.view
         window.show()
         window.raise_()
