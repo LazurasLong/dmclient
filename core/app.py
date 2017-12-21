@@ -1,8 +1,8 @@
 import os
+import shutil
 from logging import getLogger
 
-from PyQt5.QtCore import QTimer, pyqtSlot, QRunnable, QThreadPool, QObject, \
-    QThread
+from PyQt5.QtCore import QTimer, pyqtSlot, QRunnable, QThreadPool, QObject
 
 import core.config
 import game.config
@@ -110,6 +110,21 @@ class LoadCampaignTask(QRunnable):
             core.config.appconfig().last_campaign_path = self.archive_path
         self.done_cb()
 
+def shutdown_method(f):
+    """
+    A decorator that offers a safety harness: if the function ``f`` throws,
+    the exception is caught and logged but further operations in the pipeline
+    are not stopped as a result.
+
+    Note: I tried making this a part of ``AppController`` because it's the only
+    place where this is currently used. It works, but PyCharm gets very upset.
+    """
+    def wrapped(self, *args):
+        try:
+            f(self, *args)
+        except OSError as e:
+            log.exception("failed to shutdown: %s", e)
+    return wrapped
 
 class AppController(QObject):
     game_config_path = os.path.join(core.config.CONFIG_PATH, "gamesystems")
@@ -123,7 +138,7 @@ class AppController(QObject):
         super().__init__(qapp)
         self.qapp = qapp
         self.delphi = delphi
-        self.campaign_controller = None
+        self.cc = None
         self.thread_pool = QThreadPool()
         self.games = GameSystemManager()
         self.main_window = None
@@ -210,9 +225,10 @@ class AppController(QObject):
 
     def _init_cc(self, campaign, campaign_db_path):
         assert self.main_window is None
-        controller = CampaignController(campaign, self.delphi)
-        controller.init_db(campaign_db_path)
-        window = controller.view
+        # TODO: Ensure that the previous campaign was flushed out (i.e., tmp)
+        cc = self.cc = CampaignController(campaign, self.delphi)
+        cc.init_db(campaign_db_path)
+        window = cc.view
         window.show()
         window.raise_()
         window.check_for_updates.triggered.connect(self.on_check_updates)
@@ -220,10 +236,21 @@ class AppController(QObject):
         self.main_window = window
 
     def shutdown(self):
-        try:
-            self.games.save_config(self.game_config_path)
-        except OSError as e:
-            log.error("failed to save gamesystem config: %s", e)
+        """
+        Perform shutdown tasks. It is assumed at this point that save states
+        have been validated and ensured, because at this point the ship is
+        being doused with kerosine and there's nothing that can stop it  :)
+        """
+        self._flush_game_config()
+        self._clear_campaign_temp_files()
+
+    @shutdown_method
+    def _flush_game_config(self):
+        self.games.save_config(self.game_config_path)
+
+    @shutdown_method
+    def _clear_campaign_temp_files(self):
+        shutil.rmtree(self.cc.working_directory(self.cc.campaign))
 
     def on_check_updates(self):
         dlg = LoadingDialog(self.main_window,
