@@ -27,7 +27,7 @@ __all__ = [
     "display_info",
     "display_warning",
     "LoadingWidget",
-    "LoadingWindow",
+    "LoadingDialog",
 ]
 
 
@@ -164,13 +164,16 @@ class LoadingWidget(QWidget, Ui_LoadingWidget):
             self.setText(text)
 
 
-class LoadingWindow(QMainWindow):
+class LoadingDialog(QDialog):
     def __init__(self, parent=None, loading_text=""):
         super().__init__(parent)
+        self.setModal(True)
         self.task = None
         widget = LoadingWidget(self)
         widget.setText(loading_text)
-        self.setCentralWidget(widget)
+        layout = QVBoxLayout()
+        layout.addWidget(widget)
+        self.setLayout(layout)
         self.setWindowTitle(loading_text if loading_text else "Loading...")
 
     def set_task(self, task):

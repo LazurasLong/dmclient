@@ -37,7 +37,6 @@ from ui import display_error, get_open_filename, ResourceDialogManager, \
 from ui.about import show as show_about
 from ui.archive import ArchiveDialog
 from ui.preferences import show_preferences
-from ui.schemamap import schema_ui_map
 from ui.tools import DiceController as DiceController, DiceRollerDialog, QObject
 from ui.widgets.campaign.new import Ui_NewCampaignDialog
 from ui.widgets.campaign.properties import Ui_CampaignProperties
@@ -48,14 +47,6 @@ log = getLogger(__name__)
 
 
 class CampaignWindow(QMainWindow, Ui_MainWindow):
-    """
-
-    .. todo::
-        The campaign object should not be taken in the ctor. A controller
-        layer is required because this class is going to get massive quickly.
-
-        Also, maybe the controller logic can be re-used across other platforms?
-    """
     windowMoved = pyqtSignal()
     windowResized = pyqtSignal()
 
@@ -83,9 +74,7 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
         self._campaign_properties = CampaignPropertiesDialog(campaign, self)
         self.campaign_properties.triggered.connect(
             self._campaign_properties.show)
-        # FIXME: hack
-        self._campaign_properties.accepted.connect(lambda: self.on_campaign_properties_changed(campaign))
-        # self.edit_map_layers.triggered.connect(self._map_layers_dlg.show)
+        # self._campaign_properties.accepted.connect(self.on_properties_change)
 
     def _init_asset_tree(self):
         self.assetTree = QTreeView()
@@ -149,39 +138,6 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
         # dock.layer_table.doubleClicked.connect(self._map_layers_dlg.on_showedit)
         self.addDockWidget(Qt.RightDockWidgetArea, dock)
 
-    #
-    # File menu slots.
-    #
-
-    @pyqtSlot()
-    def on_new_campaign_triggered(self):
-        raise NotImplementedError
-
-    @pyqtSlot()
-    def on_open_campaign_triggered(self):
-        campaignpath = get_open_filename(self, title="Open campaign",
-                                         filter_=filters.campaign)
-        if not campaignpath:
-            return
-
-        try:
-            campaign = load_campaign(campaignpath)
-            CampaignWindow(campaign).show()
-        except InvalidArchiveError:
-            display_error(self, "Can't open archive file!")
-
-    @pyqtSlot()
-    def on_save_campaign_triggered(self):
-        raise NotImplementedError
-
-    @pyqtSlot()
-    def on_saveas_triggered(self):
-        raise NotImplementedError
-
-    @pyqtSlot()
-    def on_close_campaign_triggered(self):
-        raise NotImplementedError
-
     @pyqtSlot()
     def on_import_rules_triggered(self):
         path = get_open_filename(self, "Open Archive",
@@ -200,61 +156,9 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
             log.error(e)
             display_error(self, "The archive could not be read.")
 
-    #
-    # Edit menu
-    #
-
-    @pyqtSlot()
-    def on_redo_triggered(self):
-        raise NotImplementedError
-
-    @pyqtSlot()
-    def on_undo_triggered(self):
-        raise NotImplementedError
-
     @pyqtSlot()
     def on_edit_preferences_triggered(self):
         show_preferences(parent=self)
-
-    #
-    # Campaign menu
-    #
-
-    @pyqtSlot()
-    def on_new_session_triggered(self):
-        # self.campaign.sessions.insertRow(0)
-        raise NotImplementedError
-
-    @pyqtSlot()
-    def on_new_character_triggered(self):
-        raise NotImplementedError
-
-    @pyqtSlot()
-    def on_new_encounter_template_triggered(self):
-        raise NotImplementedError
-
-    #
-    # Session menu
-    #
-
-    @pyqtSlot()
-    def on_new_encounter_triggered(self):
-        raise NotImplementedError
-
-    @pyqtSlot()
-    def on_new_encounter_from_template_triggered(self):
-        raise NotImplementedError
-
-    def on_new_note(self):
-        raise NotImplementedError
-
-    @pyqtSlot()
-    def on_new_note_triggered(self):
-        raise NotImplementedError
-
-    @pyqtSlot()
-    def on_add_existing_note_triggered(self):
-        raise NotImplementedError
 
     #
     # Tools menu
@@ -268,27 +172,8 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
         roller.show()
         roller.raise_()
 
-    #
-    #  Help menu
-    #
-
-    @pyqtSlot()
-    def on_help_triggered(self):
-        raise NotImplementedError
-
-    @pyqtSlot()
-    def on_check_for_updates_triggered(self):
-        raise NotImplementedError
-
-    #
-    # Other slots.
-    #
-
-    def on_license_accepted(self):
-        raise NotImplementedError
-
     @pyqtSlot(Campaign)
-    def on_campaign_properties_changed(self, campaign):
+    def on_properties_change(self, campaign):
         self.setWindowTitle(campaign.name)
 
     @pyqtSlot(Map)

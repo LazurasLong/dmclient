@@ -14,7 +14,7 @@ from core.archive import PropertiesSchema, InvalidArchiveError, open_archive, \
     ArchiveMeta
 from game import GameSystem
 from model.qt import SchemaTableModel
-from ui import display_error, get_open_filename, LoadingWindow
+from ui import display_error, get_open_filename, LoadingDialog
 from ui.campaign import NewCampaignDialog
 
 log = getLogger(__name__)
@@ -125,7 +125,6 @@ class AppController(QObject):
             pass
 
     def show_new_campaign(self):
-        assert self.main_window is None
         w = self.main_window = NewCampaignDialog(self.games.systems, {})
         w.accepted.connect(self.on_new_campaign)
         w.newGameSystemRequested.triggered.connect(self.on_add_gamesystem)
@@ -153,8 +152,11 @@ class AppController(QObject):
 
     def on_new_campaign(self):
         options = self.main_window.options
+        self._clear_main_window()
+
         cid = generate_uuid()
         campaign = Campaign(cid)
+
         self._init_cc(campaign)
 
     def load_campaign(self, path):
@@ -177,21 +179,27 @@ class AppController(QObject):
             display_error(self.main_window, "The campaign could not be loaded.")
             self.show_new_campaign()
             return
+        self._clear_main_window()
+
+        campaign = self._create_campaign(campaign_path)
+
+        self._init_cc(campaign)
+
+    def _clear_main_window(self):
         self.main_window.hide()
         self.main_window.destroy()
         self.main_window = None
-
-        campaign = self._create_campaign(campaign_path)
-        self._init_cc(campaign)
 
     def _create_campaign(self, campaign_path):
         return Campaign(0)
 
     def _init_cc(self, campaign):
+        assert self.main_window is None
         controller = CampaignController(campaign, self.delphi)
         window = controller.view
         window.show()
         window.raise_()
+        window.check_for_updates.triggered.connect(self.on_check_updates)
         window.quit.triggered.connect(self.qapp.quit)
         self.main_window = window
 
@@ -200,3 +208,9 @@ class AppController(QObject):
             self.games.save_config(self.game_config_path)
         except OSError as e:
             log.error("failed to save gamesystem config: %s", e)
+
+    def on_check_updates(self):
+        dlg = LoadingDialog(self.main_window, loading_text="Checking for updates...")
+        dlg.raise_()
+        dlg.show()
+
