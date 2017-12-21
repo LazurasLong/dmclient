@@ -250,7 +250,8 @@ class AppController(QObject):
 
     @shutdown_method
     def _clear_campaign_temp_files(self):
-        shutil.rmtree(self.cc.working_directory(self.cc.campaign))
+        if self.cc:
+            shutil.rmtree(self.cc.working_directory(self.cc.campaign))
 
     def on_check_updates(self):
         dlg = LoadingDialog(self.main_window,
