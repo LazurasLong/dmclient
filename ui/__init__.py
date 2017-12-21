@@ -169,7 +169,7 @@ class LoadingDialog(QDialog):
         super().__init__(parent)
         self.setModal(True)
         self.task = None
-        widget = LoadingWidget(self)
+        widget = self.widget = LoadingWidget(self)
         widget.setText(loading_text)
         layout = QVBoxLayout()
         layout.addWidget(widget)
@@ -185,4 +185,4 @@ class LoadingDialog(QDialog):
         self.update_progress(0)
 
     def update_progress(self, percent):
-        self.centralWidget().update_progress(percent)
+        self.widget.update_progress(percent)

@@ -1,15 +1,13 @@
 import os
 from logging import getLogger
-from random import randint
 
-from PyQt5.QtCore import QTimer, pyqtSlot, QRunnable, QThreadPool, QThread, \
-    QObject
+from PyQt5.QtCore import QTimer, pyqtSlot, QRunnable, QThreadPool, QObject
 
 import core.config
 import game.config
 from campaign import Campaign
 from campaign.controller import CampaignController
-from core import archive, filters, generate_uuid
+from core import filters, generate_uuid
 from core.archive import PropertiesSchema, InvalidArchiveError, open_archive, \
     ArchiveMeta
 from game import GameSystem
