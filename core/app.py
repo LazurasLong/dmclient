@@ -54,10 +54,10 @@ class GameSystemManager:
                     meta = ArchiveMeta.load(path)
                     self.add_gamesystem(meta)
                 # bleh
-                except (
-                OSError, InvalidArchiveError, ExistingLibraryError) as e:
-                    log.warning("game system `%s' (at `%s') is invalid: %s", id_,
-                                path, e)
+                except (OSError, InvalidArchiveError,
+                        ExistingLibraryError) as e:
+                    log.warning("game system `%s' (at `%s') is invalid: %s",
+                                id_, path, e)
 
         return game_systems, last_seen_at
 
@@ -137,8 +137,8 @@ class AppController(QObject):
         w.raise_()
 
     def on_add_gamesystem(self):
-        path = get_open_filename(self.main_window,
-                                 "Import game archive", filter_=filters.library,
+        path = get_open_filename(self.main_window, "Import game archive",
+                                 filter_=filters.library,
                                  recent_key="import_game_archive")
         if not path:
             return
@@ -220,7 +220,7 @@ class AppController(QObject):
             log.error("failed to save gamesystem config: %s", e)
 
     def on_check_updates(self):
-        dlg = LoadingDialog(self.main_window, loading_text="Checking for updates...")
+        dlg = LoadingDialog(self.main_window,
+                            loading_text="Checking for updates...")
         dlg.raise_()
         dlg.show()
-
