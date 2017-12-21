@@ -1,5 +1,6 @@
 import os
 import shutil
+from datetime import datetime
 from logging import getLogger
 
 from PyQt5.QtCore import QTimer, pyqtSlot, QRunnable, QThreadPool, QObject
@@ -225,7 +226,12 @@ class AppController(QObject):
 
     def _create_campaign(self, meta):
         game_system = self.games.get(meta.game_system_id)
-        return Campaign(meta.id, game_system)
+        campaign = Campaign(meta.id, game_system)
+        campaign.name = meta.name
+        campaign.author = meta.author
+        campaign.creation_date = meta.creation_date
+        campaign.revision_date = datetime.now()
+        return campaign
 
     def _init_cc(self, campaign):
         assert self.main_window is None
