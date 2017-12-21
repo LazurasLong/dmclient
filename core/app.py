@@ -201,7 +201,7 @@ class AppController(QObject):
         self.main_window.set_task(task)
         self.main_window.raise_()
         self.main_window.show()
-        self.thread_pool.start(task)
+        QTimer.singleShot(0, lambda: self.thread_pool.start(task))
 
     def _on_campaign_loaded(self):
         QTimer.singleShot(0, self.on_campaign_loaded)
