@@ -23,6 +23,8 @@ from core.config import *
 import ui.widgets
 
 # lazily load about dialog
+from ui.widgets.about import Ui_aboutDlg
+
 _dialog = None
 
 
@@ -33,17 +35,16 @@ def show():
     _dialog.show()
 
 
-class _AboutDialog(QDialog):
+class _AboutDialog(QDialog, Ui_aboutDlg):
     def __init__(self):
         QDialog.__init__(self)
-        self.form = ui.widgets.about.Ui_aboutDlg()
-        self.form.setupUi(self)
+        self.setupUi(self)
         self.setWindowTitle("About")
-        self.form.appName.setText(APP_NAME)
-        font = self.form.appName.font()
+        self.appName.setText(APP_NAME)
+        font = self.appName.font()
         font.setPointSize(24)
-        self.form.appName.setFont(font)
-        self.form.versionAndCodename.setText("Version %s (%s)" % (APP_VERSION, APP_VERSION_NAME))
-        self.form.buildAndDate.setText("Build %s (%s)" % (APP_BUILD, APP_BUILD_DATE))
-        self.form.copyright.setText(copyright)
-        self.form.donate.clicked.connect(lambda: webbrowser.open(DONATE_URL))
+        self.appName.setFont(font)
+        self.versionAndCodename.setText("Version %s (%s)" % (APP_VERSION, APP_VERSION_NAME))
+        self.buildAndDate.setText("Build %s (%s)" % (APP_BUILD, APP_BUILD_DATE))
+        self.copyright.setText(copyright)
+        self.donate.clicked.connect(lambda: webbrowser.open(DONATE_URL))
