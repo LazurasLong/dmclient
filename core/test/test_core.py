@@ -20,18 +20,6 @@ import pytest
 from core import *
 
 
-@pytest.mark.parametrize('uuid', [generate_uuid(),
-                                  UUID('16fd78c6-827d-4aa0-aaeb-05f25118455c'),
-                                  '4a15c11c-4799-4bf7-9fa4-ac0835d3518e'])
-def test_isuuid_valid(uuid):
-    assert isuuid(uuid)
-
-
-@pytest.mark.parametrize('uuid', [None, '', 'foobar', [], {}])
-def test_isuuid_invalid(uuid):
-    assert not isuuid(uuid)
-
-
 @pytest.mark.parametrize('url,expected',
                          [("file:///", "/"), ("file:///foobar", "/foobar"),
                           ("file:///foobar/baz/bar", "/foobar/baz/bar")])

@@ -30,7 +30,6 @@ __all__ = ["InvalidUUIDError",
            "deurlify",
            "generate_uuid",
            "hrname",
-           "isuuid",
            ]
 
 
@@ -92,22 +91,4 @@ def hrlowername(s):
         'foo bar'
     """
     return s.replace('_', ' ').lower()
-
-
-def isuuid(arg):
-    """Returns true if arg is a UUID.
-
-    One of the following must be satisfied:
-    * A string conforming to UUID syntax (FIXME *insert regex*)
-    * Of the proper UUID type
-    """
-    if isinstance(arg, UUID) and arg.version == 4:
-        return True
-    elif isinstance(arg, str):
-        try:
-            UUID(arg)
-            return True
-        except ValueError:
-            pass
-    return False
 
