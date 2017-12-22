@@ -1,0 +1,3 @@
+#!/bin/bash
+PYTHONPATH=lib/libqt/ \
+	python3 dmclient.py
