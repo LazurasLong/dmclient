@@ -137,6 +137,7 @@ def main():
 
         init_appdirs()
         init_logging(args)
+        log.debug("hello, world")
         init_config()
         config = appconfig()
 

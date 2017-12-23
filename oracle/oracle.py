@@ -115,10 +115,10 @@ class Oracle:
     #
 
     def run(self):
-        out, in_ = self.delphi_pipe
+        conn = self.delphi_pipe
         while 1:
             try:
-                cmdstr = in_.recv().decode()
+                cmdstr = conn.recv().decode()
                 log.debug("received command: `%s'", cmdstr)
 
                 cmd, *args = cmdstr.split(' ')
@@ -147,14 +147,19 @@ class Oracle:
         return os.path.join(TMP_PATH, database_name)
 
 
-def oracle_main(args, delphi_pipe):
+def oracle_main(args, conn):
+    """
+    :param args: CLI arguments for oracle process
+    :param conn: The ``Connection`` object that lets us
+                 talk with dmclient proper
+    """
     stemmer = xapian.Stem("english")
 
     providers = _load_default_providers()
 
     indexer = Indexer(stemmer, providers)
     searcher = Searcher(stemmer)
-    listener = Oracle(delphi_pipe, indexer, searcher)
+    listener = Oracle(conn, indexer, searcher)
 
     try:
         indexer.thread.start()
