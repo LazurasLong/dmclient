@@ -27,11 +27,4 @@ resources/test/badmeta.dmc
 doc/src
 doc/html
 
-# Automated generated icons from SVG
-resources/icons/castle.png
-resources/icons/d20.png
-resources/icons/geographic.png
-resources/icons/grid.png
-resources/icons/maps.png
-resources/icons/network.png
-resources/icons/political.png
+/build/
