@@ -117,6 +117,7 @@ all: testarchives qrc ui
 
 PHONY+=docs
 docs: FORCE
+	$(Q)$(RM) -r doc/src doc/html # FIXME
 	$(call if_dep_changed,gendocs)
 
 PHONY+=qrc
