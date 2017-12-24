@@ -74,6 +74,7 @@ class Zygote:
         self.egg_pipe = None
         # Zygote state
         self.current_spawn = None
+        self.respawn_tries = 0
 
     def capture(self, hacky_delphiconn, oracle_connection):
         """
@@ -116,25 +117,29 @@ class Zygote:
                         self.current_spawn.join()
                         return 0
                     elif cmd == "spawn":
-                        pid = self.zygote_spawn(oracleconn)
-                        eggconn.send("spawn {}".format(pid))
+                        self.zygote_spawn(eggconn, oracleconn)
                     else:
                         print("not sure what to do with this command.")
                         continue
                 if self.current_spawn and not self.current_spawn.is_alive():
                     print("warning: I detected dead eggs")
+                    # TODO: prevent infinite loops, but let this counter reset
+                    #       at some point.
                     self.current_spawn = None
+                    if self.respawn_tries < 3:
+                        self.respawn_tries += 1
+                        self.zygote_spawn(eggconn, oracleconn)
         except KeyboardInterrupt:
             eggconn.send("told to quit")
 
-    def zygote_spawn(self, oracle_connection):
+    def zygote_spawn(self, eggconn, oracle_connection):
         if self.current_spawn and self.current_spawn.is_alive():
             log.error("asked to spawn when current is still alive!")
             return
         self.current_spawn = Process(target=self.target, name=self.name,
                                      args=(self.args, oracle_connection))
         self.current_spawn.start()
-        return self.current_spawn.pid
+        eggconn.send("spawn {}".format(self.current_spawn.pid))
 
     def zygote_sighandler(self, signum, frame):
         if signum == signal.SIGSEGV:
