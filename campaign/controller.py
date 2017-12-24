@@ -331,8 +331,7 @@ class CampaignController:
         context_menu.exec(controller.view.mapToGlobal(point))
 
     def on_campaign_properties(self):
-        dlg = self.properties_dialog = CampaignPropertiesDialog(self.campaign,
-                                                                self.view)
+        dlg = CampaignPropertiesDialog(self.campaign, self.view)
         dlg.accepted.connect(self.on_properties_update)
         dlg.show()
 
