@@ -232,6 +232,16 @@ class SessionController(QObject):
 
 
 class CampaignController:
+    """
+    A ``CampaignController`` is the controller for a campaign during the
+    lifetime of an application. To keep this class small, it is mostly
+    responsible for managing the highest level logic on a campaign and
+    delegating operations to sub-controllers.
+
+    ``CampaignControllers`` operate on already existing campaigns. The creation
+    of, for example, the working directory for the campaign is expected to be
+    handled externally, e.g. by the ``AppController`` or test harnesses.
+    """
     def __init__(self, campaign, delphi):
         self.campaign = campaign
         self.delphi = delphi
