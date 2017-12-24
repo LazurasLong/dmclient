@@ -76,6 +76,10 @@ class Zygote:
         self.current_spawn = None
         self.respawn_tries = 0
 
+    @property
+    def pid(self):
+        return self.egg.pid
+
     def capture(self, hacky_delphiconn, oracle_connection):
         """
         Capture the current state of the process, forking off a new child
@@ -261,12 +265,12 @@ class Delphi:
 
     def start(self):
         self.keep_going = True
-        pid = self.zygote.capture(self.delphi_connection,  # FIXME
-                                  self.oracle_connection)
+        self.zygote.capture(self.delphi_connection,  # FIXME
+                            self.oracle_connection)
         self.listen_thread = threading.Thread(target=self.listen_loop,
                                               name="delphi")
         self.listen_thread.start()
-        log.debug("delphi started, zygote oracle PID = %s" % pid)
+        log.debug("delphi started, zygote oracle PID = %s" % self.zygote.pid)
         oracle_pid = self.zygote.spawn()
         log.debug("spawned oracle PID = %s", oracle_pid)
 
