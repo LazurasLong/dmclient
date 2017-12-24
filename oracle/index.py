@@ -16,9 +16,8 @@
 #
 
 """Classes and functions for indexing search providers."""
-
+import queue
 from logging import getLogger
-from queue import Queue
 from threading import Thread
 
 import xapian
@@ -53,9 +52,10 @@ class Indexer:
         self.providers = providers
 
         self.thread = Thread(target=self.run, name="indexer")
-        self.pending = Queue()
+        self.pending = queue.Queue()
 
         self.database = None
+        self.keep_going = True
 
     def database_changed(self, database):
         # FIXME this is going to cause a race condition if the db changes
@@ -63,20 +63,23 @@ class Indexer:
         self.database = database
 
     def run(self):
-        while 1:
-            document = self.pending.get()
+        while self.keep_going:
             try:
-                provider = self.providers[document.type]
-            except KeyError:
-                log.error("no provider `%s' for document `%s'",
-                          document.type, document.id)
-            else:
+                document = self.pending.get(timeout=2)
                 try:
-                    text = provider.extract_document_text(document)
-                    self._index_document_text(text)
-                except xapian.Error as e:
-                    log.error("xapian error whilst indexing `%s': %s",
-                              document, e)
+                    provider = self.providers[document.type]
+                except KeyError:
+                    log.error("no provider `%s' for document `%s'",
+                              document.type, document.id)
+                else:
+                    try:
+                        text = provider.extract_document_text(document)
+                        self._index_document_text(text)
+                    except xapian.Error as e:
+                        log.error("xapian error whilst indexing `%s': %s",
+                                  document, e)
+            except queue.Empty:
+                pass
 
     def _index_document_text(self, text):
         document = xapian.Document()

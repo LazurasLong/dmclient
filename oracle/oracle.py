@@ -89,6 +89,7 @@ class Oracle:
         self.delphi_conn = delphi_conn
         self.indexer = indexer
         self.searcher = searcher
+        self.keep_going = True
 
     #
     # Oracle endpoint implementation.
@@ -113,7 +114,7 @@ class Oracle:
         self.searcher.pending.put(' '.join(query))
 
     def quit(self):
-        sys.exit(0)
+        self.keep_going = False
 
     #
     # Threading magic.
@@ -121,7 +122,7 @@ class Oracle:
 
     def run(self):
         conn = self.delphi_conn
-        while 1:
+        while self.keep_going:
             try:
                 cmdstr = conn.recv()
                 log.debug("received command: `%s'", cmdstr)
@@ -139,6 +140,9 @@ class Oracle:
                 break
             except UnicodeDecodeError as e:
                 log.error("error receiving command: %s", e)
+        # TODO: remove this garbage and convert to futures!
+        self.indexer.keep_going = False
+        self.searcher.keep_going = False
 
 
 def main(args, conn):

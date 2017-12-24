@@ -113,7 +113,6 @@ class Zygote:
                     cmd = eggconn.recv()
                     if cmd == "quit":
                         delphiconn.send("quit")  # FIXME hack
-                        print("waiting on children to die, this may take a while")
                         self.current_spawn.join()
                         return 0
                     elif cmd == "spawn":
