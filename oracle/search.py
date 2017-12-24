@@ -23,7 +23,7 @@ class Searcher:
     def run(self):
         while self.keep_going:
             try:
-                query = self.pending.get(timeout=2)
+                query = self.pending.get(timeout=1)
                 with self.database.lock:
                     self.print_results(query)
             except queue.Empty:

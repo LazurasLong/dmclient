@@ -65,7 +65,7 @@ class Indexer:
     def run(self):
         while self.keep_going:
             try:
-                document = self.pending.get(timeout=2)
+                document = self.pending.get(timeout=1)
                 try:
                     provider = self.providers[document.type]
                 except KeyError:
