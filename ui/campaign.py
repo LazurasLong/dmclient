@@ -66,13 +66,13 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
 
         # FIXME this seems to do a subprocess thing. We don't want their stderr!
         self.digitalbusking.triggered.connect(lambda: webbrowser.open(DONATE_URL))
-        self.complain.triggered.connect(
-            lambda: webbrowser.open(BUG_URL))
+        self.complain.triggered.connect(lambda: webbrowser.open(BUG_URL))
         self.about.triggered.connect(show_about)
 
     def _init_asset_tree(self):
         self.assetTree = QTreeView()
         self.assetTree.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.assetTree.setUniformRowHeights(True)
 
         dock = QDockWidget(self)
         dock.setWindowTitle("Campaign assets")

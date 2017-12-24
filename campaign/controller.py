@@ -15,22 +15,26 @@
 # along with dmclient.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import os
 from logging import getLogger
 
-import os
-from PyQt5.QtCore import QObject, QTimer, pyqtSlot
+from PyQt5.QtCore import QObject, QTimer, pyqtSlot, QPoint
 from PyQt5.QtGui import QIcon, QStandardItem
 from PyQt5.QtWidgets import QMenu
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from campaign import Player, CampaignSession
+from campaign.note import ExternalNote, Note, InternalNote
 from core import filters
 from core.config import TMP_PATH
-from model.tree import DictNode, ListNode, Node, NodeFactory, TreeModel
-from ui import get_open_filename
+from model import GameBase
+from model.tree import FixedNode, TableNode, TreeModel, TreeNode, BadNode
+from ui import get_open_filename, display_error
 from ui.battlemap.controls import ControlScheme
 from ui.battlemap.widgets import RegionalMapView
-from ui.campaign import CampaignWindow, CampaignPropertiesDialog
+from ui.campaign import CampaignPropertiesDialog, CampaignWindow
+from ui.note import NoteEditorDialog
 from ui.search import SearchCompleter
 
 log = getLogger(__name__)
@@ -137,39 +141,90 @@ class SearchController(QObject):
 
 class NoteController(QObject):
     def __init__(self, cc):
+        self._cc = cc
         view = cc.view
         super().__init__(view)
-        self.view = view
-        self.tree_node = ListNode(icon=QIcon(":/icons/books.png"),
-                                  text="Documents", delegate=self)
+        self.view = view  # ?!
+        self.tree_node = TableNode(cc.db(), Note,
+                                   icon=QIcon(":/icons/books.png"),
+                                   text="Documents", delegate=self,
+                                   item_action=self.item_doubleclicked)
         view.import_document.triggered.connect(self.on_import_document)
-        view.add_external_document.triggered.connect(
-            self.on_add_external_document)
+        view.add_document.triggered.connect(self.on_add_document)
         view.remove_document.triggered.connect(self.on_remove_document)
-        # search_node.apply(self.delphi.documents)
+
+    def item_doubleclicked(self, node):
+        # FIXME this is incrensely hacky.
+        db = self._cc.db()
+        try:
+            item = db.query(InternalNote).filter(Note.id == node.id)[0]
+            dlg = NoteEditorDialog(item, db, self.view)
+            dlg.raise_()
+            dlg.exec()
+        except IndexError:
+            # It's an external note.
+            pass
 
     def context_menu(self):
         window = self.view
-        return [window.import_document, window.add_external_document,
+        return [window.import_document, window.add_document,
                 window.remove_document]
 
     def item_context_menu(self):
         raise NotImplementedError
 
     @pyqtSlot()
+    def on_new_document(self):
+        base_note = Note(name="Untitled", author=self._cc.campaign.author)
+        internal_note = InternalNote(note_id=base_note.id,
+                                     text="New note...")
+        db = self._cc.db()
+        db.add(base_note)
+        db.add(internal_note)
+        db.commit()
+        self.tree_node.update()
+
+    @pyqtSlot()
     def on_import_document(self):
+        path = get_open_filename(self.view, "Import text document", filters.txt)
+        if not path:
+            return
+        try:
+            with open(path) as f:
+                contents = f.read()
+        except OSError as e:
+            log.error("failed to import note: %s", e)
+            display_error(self.view, "The document could not be imported.",
+                          "Unable to import document")
+        else:
+            base_note = Note(name=os.path.basename(path),
+                             author=self._cc.campaign.author)
+            note = InternalNote(text=contents)
+            db = self._cc.db()
+            db.add(base_note)
+            db.add(note)
+            db.commit()
+            self.tree_node.update()
+
+    @pyqtSlot()
+    def on_add_document(self):
         path = get_open_filename(self.view, "Add external document",
                                  filters.document)
         if not path:
             return
         try:
-            raise NotImplementedError
+            with open(path):
+                pass
+            base_note = Note(name=os.path.basename(path),
+                             author="")
+            note = ExternalNote(note_id=base_note.id, url=path)
+            db = self._cc.db()
+            db.add(base_note)
+            db.add(note)
+            db.commit()
+            self.tree_node.update()
         except OSError as e:
             log.error("could not open note: %s", e)
-
-    @pyqtSlot()
-    def on_add_external_document(self):
-        raise NotImplementedError
 
     @pyqtSlot()
     def on_remove_document(self):
@@ -181,18 +236,8 @@ class MapController(QObject):
         view = cc.view
         super().__init__(view)
         self.campaign_window = view
-        map_node_factory = NodeFactory(action=self.show_map)
-
-        region = DictNode(text="Regional", child_factory=map_node_factory)
-        # region.apply(campaign.regional_maps)
-        encounter = DictNode(text="Encounters", child_factory=map_node_factory)
-        # encounter.apply(campaign.encounter_maps)
-
-        self.tree_node = Node(icon=QIcon(":/icons/maps.png"), text="Maps",
-                              delegate=self)
-        self.tree_node.add_child(region)
-        self.tree_node.add_child(encounter)
-
+        self.tree_node = FixedNode(icon=QIcon(":/icons/maps.png"), text="Maps",
+                                   action=self.show_map)
         self.toolbar = None
 
     def show_map(self, node):
@@ -213,9 +258,8 @@ class PlayerController(QObject):
     def __init__(self, cc):
         view = cc.view
         super().__init__(view)
-        self.tree_node = ListNode(text="Players",
-                                  icon=QIcon(":/icons/party.png"),
-                                  delegate=self)
+        self.tree_node = TableNode(cc.db(), Player, text="Players",
+                                   icon=QIcon(":/icons/party.png"))
 
 
 class SessionController(QObject):
@@ -223,33 +267,35 @@ class SessionController(QObject):
         view = cc.view
         super().__init__(view)
         icon = QIcon(":/icons/sessions.png")
-        session_node_factory = NodeFactory(action=self.show_session, icon=icon)
-        self.tree_node = ListNode(icon=icon, text="Sessions",
-                                  child_factory=session_node_factory)
+        self.tree_node = BadNode(text="Campaign sessions")
+        # self.tree_node = TableNode(CampaignSession,
+        #                            cc.db(), icon=icon, text="Sessions")
 
     def show_session(self):
         pass
 
 
-class CampaignController:
+class CampaignController(QObject):
     """
     A ``CampaignController`` is the controller for a campaign during the
     lifetime of an application. To keep this class small, it is mostly
     responsible for managing the highest level logic on a campaign and
     delegating operations to sub-controllers.
 
-    ``CampaignControllers`` operate on already existing campaigns. The creation
-    of, for example, the working directory for the campaign is expected to be
-    handled externally, e.g. by the ``AppController`` or test harnesses.
+    ``CampaignController`` instances operate on already existing campaigns. The
+    creation of, for example, the working directory for the campaign is expected
+    to be handled externally, e.g. by the ``AppController`` or test harnesses.
     """
+
     def __init__(self, campaign, delphi):
+        super().__init__(None)
         self.campaign = campaign
         self.delphi = delphi
 
         campaign_db_path = self.database_path(campaign)
-        self._engine = create_engine("sqlite://{}".format(campaign_db_path))
-        self._Session = sessionmaker(engine=self._engine)
-
+        self._engine = create_engine("sqlite:///{}".format(campaign_db_path), echo=True)
+        self._Session = sessionmaker(bind=self._engine)
+        GameBase.metadata.create_all(self._engine)
 
         self.view = CampaignWindow(self.campaign)
         self.map_controller = None
@@ -263,11 +309,18 @@ class CampaignController:
 
         self._init_view()
 
+    def db(self):
+        """
+        :return: A session to the database.
+        """
+        self._Session.configure(bind=self._engine)
+        return self._Session()
+
     @staticmethod
     def working_directory(campaign):
         """
         Return an absolute path to the working directory for the campaign,
-        usually `TEMP_DIR/{campaign.id}/`.
+        usually ``TEMP_DIR/{campaign.id}/``.
         """
         return os.path.join(TMP_PATH, str(campaign.id))
 
@@ -279,7 +332,14 @@ class CampaignController:
     @staticmethod
     def database_path(campaign):
         return os.path.join(CampaignController.extracted_archive_path(campaign),
-                            "database.sqlite")
+                            "campaign.db")
+
+    @staticmethod
+    def build_context_menu(listing, name):
+        context_menu = QMenu(name)
+        for action in listing:
+            context_menu.addAction(action)
+        return context_menu
 
     @staticmethod
     def search_database_path(campaign):
@@ -305,14 +365,13 @@ class CampaignController:
         v.searchEdit.returnPressed.connect(sc.on_search_requested)
 
         v.assetTree.setModel(self.asset_tree_model)
-        v.assetTree.doubleClicked.connect(lambda x: self.asset_tree_doubleclick(x))
+        v.assetTree.doubleClicked.connect(self.asset_tree_doubleclick)
         v.assetTree.customContextMenuRequested.connect(self.asset_tree_context_menu_requested)
 
         v.campaign_properties.triggered.connect(self.on_campaign_properties)
 
     def build_asset_tree(self, campaign):
-        root = Node()
-        root.add_children([controller.tree_node for controller in
+        root = FixedNode(*[controller.tree_node for controller in
                            [self.map_controller, self.session_controller,
                             self.player_controller, self.note_controller]])
         return root
@@ -322,29 +381,32 @@ class CampaignController:
         self.search_controller.update_results_popup()
 
     def asset_tree_doubleclick(self, index):
-        log.debug("asset_tree_doubleclick(%s)", index)
         node = index.internalPointer()
         if node.action:
-            node.action(node)  # woo weird!
+            node.action(node)
+        elif node.parent and node.parent.item_action:
+            node.parent.item_action(node)
 
+    @pyqtSlot(QPoint)
     def asset_tree_context_menu_requested(self, point):
-        log.debug("asset_tree_context_menu_requested(%s)" % point)
         index = self.view.assetTree.indexAt(point)
         node = index.internalPointer()
         controller = node.delegate
         if not controller:
             log.debug("There is no controller on this node.")
             return
-        context_menu = QMenu("Asset tree context menu")
-        for action in controller.context_menu():
-            context_menu.addAction(action)
+        context_menu = CampaignController.build_context_menu(
+            controller.context_menu(),
+            "Asset tree context menu")
         context_menu.exec(controller.view.mapToGlobal(point))
 
+    @pyqtSlot()
     def on_campaign_properties(self):
         dlg = CampaignPropertiesDialog(self.campaign, self.view)
-        dlg.accepted.connect(lambda: self.on_properties_update(dlg))
+        dlg.accepted.connect(self.on_properties_update(dlg))
         dlg.show()
 
+    @pyqtSlot()
     def on_properties_update(self, propdlg):
         options = propdlg.options
         for k, v in options.items():

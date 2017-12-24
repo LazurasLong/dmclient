@@ -29,7 +29,7 @@ from logging import getLogger
 
 from sqlalchemy import Column, String
 
-from model import DescribableMixin, Base
+from model import DescribableMixin, GameBase
 from model.schema import *
 
 __all__ = ["InvalidArchiveError", "InvalidSessionError", "ArchiveMeta",
@@ -97,8 +97,7 @@ class ArchiveMeta:
                 meta.last_seen_path = path
                 return meta
         except (tarfile.ReadError, EOFError, JSONDecodeError):
-            raise InvalidArchiveMetadataError(
-                "invalid archive meta {}".format(path))
+            raise InvalidArchiveMetadataError("invalid meta for {}".format(path))
 
 
 class ArchiveMetaSchema(Schema):
@@ -146,7 +145,7 @@ class InvalidArchiveMetadataError(InvalidArchiveError):
     pass
 
 
-class ArchiveMetaSql(Base, DescribableMixin):
+class ArchiveMetaSql(GameBase, DescribableMixin):
     __tablename__ = "archives"
 
     isbn = Column(String)

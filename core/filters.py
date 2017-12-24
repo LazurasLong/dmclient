@@ -22,8 +22,12 @@ Since dmclient only supports Qt at the moment this is all very simple.
 
 from core.config import APP_NAME
 
-__all__ = ["join", "any", "campaign", "library", "expansion", "json", "yaml",
-           "png", "gif", "jpeg", "svg", "icon"]
+__all__ = ["join",
+           "any", "campaign", "library", "expansion",
+           "json", "yaml",
+           "png", "gif", "jpeg", "svg", "icon",
+           "all_documents", "pdf", "txt", "document",
+           ]
 
 
 def join(*args):
@@ -38,17 +42,18 @@ def join(*args):
 any = "All files (*.*)"
 campaign = "%s campaign (*.dmc)" % APP_NAME
 library = "%s library (*.dml)" % APP_NAME
-expansion = "%s expansion (*.dmx)" % APP_NAME  # TODO: is this used
+expansion = "%s expansion (*.dmx)" % APP_NAME
 
 json = "JSON (*.json)"
 yaml = "YAML (*.yaml)"
 
 png = "Portable Network Graphics (*.png)"
 gif = "GIF (*.gif)"
-jpeg = "JPEG (*.jpeg);;JPG (*.jpg)"
+jpeg = join("JPEG (*.jpeg)", "JPG (*.jpg)")
 svg = "Scalable Vector Graphics (*.svg)"
 icon = join(png, gif, jpeg, svg)
 
+all_documents = "All supported document formats (*.pdf, *.txt)"
 pdf = "PDF (*.pdf)"
 txt = "Plain text (*.txt)"
-document = join(pdf, txt)
+document = join(all_documents, pdf, txt)

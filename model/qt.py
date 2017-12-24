@@ -35,6 +35,8 @@ log = getLogger(__name__)
 
 class DMRole(Enum):
     id_role = Qt.UserRole
+    action_role = Qt.UserRole + 1
+    altaction_role = Qt.UserRole + 2
 
 
 def qdatetime(datetime):

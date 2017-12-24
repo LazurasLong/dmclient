@@ -70,6 +70,7 @@
     <addaction name="separator"/>
     <addaction name="import_rules"/>
     <addaction name="import_document"/>
+    <addaction name="add_document"/>
     <addaction name="separator"/>
     <addaction name="quit"/>
    </widget>
@@ -536,22 +537,22 @@
     <string>Copy a document into the campaign archive</string>
    </property>
   </action>
-  <action name="add_external_document">
+  <action name="remove_document">
+   <property name="text">
+    <string>Remove document</string>
+   </property>
+  </action>
+  <action name="add_document">
    <property name="icon">
     <iconset>
      <normalon>:/icons/add_external_books.png</normalon>
     </iconset>
    </property>
    <property name="text">
-    <string>Add external document...</string>
+    <string>Add document reference...</string>
    </property>
    <property name="toolTip">
-    <string>Add a document, but do not copy into the campaign archive.</string>
-   </property>
-  </action>
-  <action name="remove_document">
-   <property name="text">
-    <string>Remove document</string>
+    <string>Add a document and reference the original on your computer</string>
    </property>
   </action>
  </widget>

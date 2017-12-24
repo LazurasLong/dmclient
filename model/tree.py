@@ -15,156 +15,187 @@
 # along with dmclient.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-"""Some kind of pythonic-ish tree structure exposing a object hierarchy. Poorly.
+"""
+dmclient's "asset tree", the central tree-like structure exposing most of the
+campaign elements up-front.
+
+Classes of type ``TreeNode`` have:
+
+1. An ID,
+2. an (opaquely known) icon,
+3. an action, and
+4. a list of column delegates
+
+These nodes form a tree whose root is passed into a ``TreeModel`` for use with
+``QTreeView`` and the like.
+
+Node types
+----------
+
+- ``TreeNode``. Common ABC of node types.
+
+- ``FixedNode``. Built programmatically. Supports "just" strings as
+
+- ``TableNode``. Points to a database table and displays a the list of
+  objects in that table.
+
+- ``AttrNode``. Receives a python object (which may be from the ORM) and an
+  optional list of attribute names to display as children.
+
+- ``ForeignAttrNode``. Like ``AttrNode``, but the column is assumed to contain
+  a foreign key ID which is then cross-referenced in a different table. The
+  resulting looked up object is assigned as an ``AttrNode``.
+
+"Tables" are referenced by either an SQLAlchemy ``Table`` object, or by a
+declarative schema class.
+
+Node actions
+------------
+
+Nodes have an *action*, which the model coordinates dispatch of. The action
+handler is always passed the id of the node.
+
+Nodes also have an *alternate action*, which is typically used to implement
+context menu handlers via passing in the handler routine as the alternate
+action. ``TreeModel`` is then capable of retrieving these actions via
+``DMRole.action_role`` and ``DMRole.altaction_role`` respectively.
+
+Column delegates
+----------------
+
+Delegates may be assigned to a given column, which causes children to be
+descended as a tree node of the delegates type. For example, combining a
+
+For example, ``TableNode`` and ``AttrNode`` may be combined to form useful
+displays of data: after assigning a delegate to database column ``i`` of the
+``TableNode``, the object returned (ending up in as child row ``i`` of
+the tree node) is displayed within an ``AttrNode``.
+
+Module contents
+---------------
 
 """
 
 from logging import getLogger
 
-from PyQt5.QtCore import QAbstractItemModel, QModelIndex, QVariant, Qt, pyqtSlot, pyqtSignal
+from PyQt5.QtCore import QAbstractItemModel, QModelIndex, QVariant, Qt, pyqtSlot
 
-from core import hrname
 from model.qt import DMRole
 
-__all__ = ["Node", "ListNode", "DictNode", "NodeFactory"]
+__all__ = ["TreeNode", "FixedNode", "TableNode", "TreeModel"]
 
 log = getLogger(__name__)
 
 
-class Node:
-    def __init__(self, action=None, icon=None, text="", parent=None, id=None,
-                 delegate=None):
+class TreeNode:
+    def __init__(self, action=None, item_action=None,
+                 icon=None, text="", parent=None, id=None, delegate=None):
         self.action = action
+        self.item_action = item_action
         self.icon = icon
         self.text = text
         self.parent = parent
         self.id = id
-        self.children = []
         self.delegate = delegate
+
+    @property
+    def children(self):
+        raise NotImplementedError
 
     def __len__(self):
         return len(self.children)
 
     def __repr__(self):
-        return "Node({}, text=\"{}\", #children={})".format(self.icon,
-                                                            self.text,
-                                                            len(self.children))
+        return ("{}({}, text=\"{}\", #children={})"
+                .format(self.__class__.__name__,
+                        self.icon,
+                        self.text, len(self)))
 
-    def add_children(self, children):
+    def update(self):
+        for child in self.children:
+            child.update()
+
+
+class BadNode(TreeNode):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @property
+    def children(self):
+        return []
+
+
+class FixedNode(TreeNode):
+    def __init__(self, *children, **kwargs):
+        super().__init__(**kwargs)
+        self._children = children
         for child in children:
-            self.add_child(child)
+            child.parent = self
 
-    def add_child(self, child):
-        assert isinstance(child, Node)
-        self.children.append(child)
-        child.parent = self
-
-    def apply(self, o):
-        """Apply an object to this tree, establishing the mappings?!"""
-        if not self.text:
-            self.text = str(o)
+    @property
+    def children(self):
+        return self._children
 
 
-class AttrNode(Node):
-    def __init__(self, attr_name, child_cls=Node, action=None, icon=None,
-                 text=""):
-        """AttrNode specifies a formula for a later-applied object. It is
-        essentially a wrapper for another type of node ``child_cls``.
+class AttrNode(TreeNode):
+    def __init__(self, obj, *attr_names, **kwargs):
+        super().__init__(**kwargs)
+        assert all(hasattr(obj, attr) for attr in attr_names)
+        self.obj = obj
+        self.attr_names = attr_names
+        self._children = []
+        self.update()
 
-        Keyword arguments:
-        attr_name -- name of attr to look for
-        child_cls -- Node class for the thing
-        text -- text for the node name. If Falsey, ``hrname(attr_name)``
+    def update(self):
+        self._children = [BadNode(text=str(item), parent=self,
+                                  delegate=self.delegate)
+                          for item in [getattr(self.obj, attr)
+                                       for attr in self.attr_names]]
 
+    @property
+    def children(self):
+        return self._children
+
+
+class TableNode(TreeNode):
+    """
+    A tree node class suitable for displaying a database table.
+    """
+
+    def __init__(self, db, schema, *cols, **kwargs):
         """
-        if not text:
-            text = hrname(attr_name)
-        super().__init__(action=action, icon=icon, text=text)
-        self.attr_name = attr_name
-        self.child_cls = child_cls
 
-    def apply(self, o):
-        child_cls = self.child_cls
-        attr = getattr(o, self.attr_name)
-        try:
-            # Gross, this is a bit hacky.
-            if isinstance(attr, str):
-                raise TypeError
+        :param db: Database session.
+        :param schema: The schema/table to monitor.
+        :param cols: List of column names to display. If nothing is passed,
+                     then every column is considered.
+        :param kwargs: Passed to :py:class:`TreeNode`.
+        """
+        super().__init__(**kwargs)
+        self.schema = schema
+        self.db = db
+        self._children = []
+        self.update()
 
-            for thing in attr:
-                child = child_cls(text=str(thing))
-                self.add_child(child)
-        except TypeError:
-            self.text = str(attr)
+    @property
+    def children(self):
+        return self._children
 
-
-class ListNode(Node):
-    def __init__(self, action=None, icon=None, text="", child_factory=None,
-                 delegate=None):
-        super().__init__(action, icon, text, delegate=delegate)
-        if child_factory is None:
-            child_factory = NodeFactory()
-        self.child_factory = child_factory
-
-    def apply(self, l):
-        child_factory = self.child_factory
-        for thing in l:
-            node = child_factory.create(thing, self)
-            self.children.append(node)
-
-
-class DictNode(Node):
-    """A tree node class for wrapping dictionaries. The values form the children
-    of this node.
-
-    .. note::
-        This class assumes the ordered dict property of CPython 3.6.
-    """
-
-    def __init__(self, action=None, icon=None, text="", child_factory=None):
-        super().__init__(action, icon, text)
-        if child_factory is None:
-            child_factory = NodeFactory()
-        self.child_factory = child_factory
-        self._dict = None
-        self._dict_children = []
-        self._child_wrapper = None
-
-    def apply(self, d):
-        factory = self.child_factory
-        self.children = [factory.create(v, self, id=k) for k, v in d.items()]
-        log.debug("{}".format(self.children))
-
-
-class NodeFactory:
-    """A ``NodeFactory`` allows a ``ListNode`` or ``DictNode`` to create
-    customised nodes for their children entries.
-
-    Parameters of this class are used in the created child objects.
-
-    .. todo::
-        Does it make sense to pass in the ``parent`` to ``.create()``? It allows
-        the factories to be reused...
-    """
-
-    def __init__(self, action=None, icon=None):
-        self.action = action
-        self.icon = icon
-
-    def create(self, o, parent, icon=None, text="", id=None):
-        if not text:
-            text = str(o)
-        if not icon:
-            icon = self.icon
-        node = Node(self.action, icon, text, parent, id)
-        return node
+    def update(self):
+        res = self.db.query(self.schema).all()
+        self._children = [BadNode(text=str(item), parent=self, id=item.id,
+                                  delegate=self.delegate)
+                          for item in res]
 
 
 class TreeModel(QAbstractItemModel):
-    """This class presents an item view suitable for tree views
-    based on a :py:class:`model.tree.Node` hierarchy.
+    """
+    This class presents an item view suitable for tree views
+    based on a :py:class:`TreeNode` hierarchy.
 
-    This class is mostly based on the "Simple Tree Model" example.
+    Stores a tuple inside of the `internalPointer` of each model index. This
+    tuple is a ``(parent_node, child_row_i)``. If the index does not correspond
+    to a leaf node, then ``child_row_i`` will be ``-1``.
 
     .. todo::
         This class is read-only; support some kind of editing!
@@ -174,7 +205,7 @@ class TreeModel(QAbstractItemModel):
 
     """
 
-    def __init__(self, root: Node, title="", parent=None):
+    def __init__(self, root: TreeNode, title="", parent=None):
         super().__init__(parent)
         self.root = root
         self.title = title
@@ -189,12 +220,12 @@ class TreeModel(QAbstractItemModel):
     def columnCount(self, parent=QModelIndex()):
         return 1
 
-    def data(self, parent=QModelIndex(), role=Qt.DisplayRole):
-        if not parent.isValid() or role not in (Qt.DisplayRole,
-                                                Qt.DecorationRole,
-                                                DMRole.id_role):
+    def data(self, index=QModelIndex(), role=Qt.DisplayRole):
+        if not index.isValid() or role not in (Qt.DisplayRole,
+                                               Qt.DecorationRole,
+                                               DMRole.id_role):
             return QVariant()
-        node = parent.internalPointer()
+        node = index.internalPointer()
         if role == Qt.DisplayRole:
             return node.text
         elif role == DMRole.id_role:

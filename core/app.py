@@ -103,7 +103,7 @@ class LoadCampaignTask(QRunnable):
             self.cb(5)
             meta = open_archive(self.archive_path)
             self.cb(15)
-            destination = CampaignController.working_directory(meta)
+            destination = CampaignController.extracted_archive_path(meta)
             unpack_archive(meta, destination)
             self.cb(80)
             self.result = meta, destination
@@ -189,8 +189,8 @@ class AppController(QObject):
             option = options[attr]
             if option:
                 setattr(campaign, attr, option)
-        campaign_wd = CampaignController.working_directory(campaign)
-        os.mkdir(campaign_wd)
+        os.mkdir(CampaignController.working_directory(campaign))
+        os.mkdir(CampaignController.extracted_archive_path(campaign))
         self._init_cc(campaign)
 
     def load_campaign(self, path):

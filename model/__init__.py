@@ -1,7 +1,8 @@
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 
-Base = declarative_base()
+"""The declarative base for all tables in the ``game`` schema."""
+GameBase = declarative_base()
 
 
 class DescribableMixin:

@@ -19,14 +19,10 @@ from datetime import datetime
 
 from sqlalchemy import String, Column, Integer
 
-from model import Base, AssetMixin
+from model import GameBase, AssetMixin
 
 
-class Note:
-    pass
-
-
-class Player(Base, AssetMixin):
+class Player(GameBase, AssetMixin):
     __tablename__ = "players"
 
     kills = Column(Integer)
@@ -69,13 +65,3 @@ class CampaignSession:
     def __str__(self):
         return str(self.start_time)
 
-
-class Note:
-    def __init__(self, id):
-        self.id = id
-
-
-class ExternalNote(Note):
-    def __init__(self, id, url):
-        super().__init__(id)
-        self.url = url

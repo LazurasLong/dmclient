@@ -15,14 +15,47 @@
 # along with dmclient.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-"""Test the declarative dumb model tree crap that we've hastily thrown together.
-
-"""
-
 import pytest
 from PyQt5.QtCore import QModelIndex, QVariant, Qt
+from sqlalchemy import Integer, String, Column, create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-from model.tree import AttrNode, DictNode, ListNode, Node, TreeModel
+from model.tree import AttrNode, TreeModel, FixedNode, TableNode
+
+
+class TestFixedNode:
+    def test_default_ctor(self):
+        node = FixedNode()
+        assert node.text == ""
+        assert len(node.children) == 0
+        assert node.parent is None
+
+    def test_ctor(self):
+        node = FixedNode(text="Foo")
+        assert node.text == "Foo"
+        assert len(node.children) == 0
+        assert node.parent is None
+
+    def test_node_children(self):
+        node = FixedNode(FixedNode())
+        assert len(node.children) == 1
+
+    def test_parent(self):
+        child = FixedNode()
+        root = FixedNode(child)
+        assert root.parent is None
+        assert child.parent is root
+
+    def test_multiple_levels(self):
+        root = FixedNode(
+            FixedNode(),
+            FixedNode(FixedNode()),
+            FixedNode(FixedNode(), FixedNode()),
+        )
+        assert len(root.children[0]) == 0
+        assert len(root.children[1]) == 1
+        assert len(root.children[2]) == 2
 
 
 class FooClass:
@@ -41,125 +74,76 @@ def fooinst():
     return FooClass()
 
 
-@pytest.fixture
-def node():
-    return Node()
-
-
-class TestNode:
-    def test_default_ctor(self, node):
-        assert node.text == ""
-        assert len(node.children) == 0
-        assert node.parent is None
-
-    def test_node_children(self, node):
-        node.add_child(Node(text="foo"))
-        assert len(node.children) == 1
-
-    @pytest.mark.parametrize('o', (None, "foo", 42, {"foo": "bar"}))
-    def test_apply(self, o):
-        """Ensure that the ``Node.apply()`` function does not modify the node
-        itself.
-
-        """
-        # Weird verification of duck typing expectations...
-        node = Node(action="foo", icon="bar", text="baz")
-        node.apply(o)
-        assert node.action == "foo"
-        assert node.icon == "bar"
-        assert node.text == "baz"
-
-
 class TestAttrNode:
-    def test_default_ctor(self, fooinst):
-        node = AttrNode("l")
-        assert node.text == "L"
-        assert len(node.children) == 0
+    def test_one_child(self, fooinst):
+        node = AttrNode(fooinst, "l", text="Node")
+        assert node.text == "Node"
+        assert len(node.children) == 1
         assert node.parent is None
+        child = node.children[0]
+        assert child.parent is node
+        assert child.text == repr(fooinst.l)  # uhh
 
-    def test_attrnode_children_length(self, fooinst):
-        node = AttrNode("l")
-        node.apply(fooinst)
+    def test_multiple_attributes(self, fooinst):
+        node = AttrNode(fooinst, "i", "l")
+        assert node.text == ""
         assert len(node.children) == 2
         assert node.parent is None
-
-    def test_str_as_leaf(self, fooinst):
-        node = AttrNode("s")
-        node.apply(fooinst)
-        # FIXME: instances of str taking the property name implicitly?
-        assert node.text == "str"
-        assert len(node.children) == 0
-        assert node.parent is None
+        assert node.children[0].text == '1'
+        assert node.children[1].text == repr(fooinst.l)  # uhh
 
 
-class TestListNode:
-    def test_basic(self):
-        node = ListNode()
-        node.apply("abc")  # Abuse of ducktyping!
-
-        assert len(node.children) == 3
+Base = declarative_base()
 
 
-class TestNestedNodeTrees:
-    def test_parent(self):
-        root = Node()
-        child = Node()
-        root.add_child(child)
-        assert root.parent is None
-        assert child.parent is root
+class FooTableClass(Base):
+    __tablename__ = "foo"
 
-    def test_nodes(self):
-        root = Node(
-            Node(),
-            Node(Node()),
-            Node(Node(), Node()),
-        )
-        assert len(root.children[0]) == 0
-        assert len(root.children[1]) == 1
-        assert len(root.children[2]) == 2
+    id = Column(Integer, primary_key=True)
+    thing1 = Column(Integer, default=42)
+    thing2 = Column(String, default="foo")
+
+    def __str__(self):
+        return self.thing2
 
 
-class TestMixedNodeTrees:
-    def test_node_children(self, fooinst):
-        n = Node(text="foo")
-        n.add_child(Node(text="bar"))
-        root = Node(
-            n,
-            AttrNode("s")
-        )
-        root.apply(fooinst)
-
-        assert len(root.children) == 2
-        assert len(root.children[0]) == 1
-        assert len(root.children[1]) == 0
-
-        assert root.children[0].text == "foo"
-        assert root.children[1].text == "str"
-        assert root.children[0].children[0].text == "bar"
+@pytest.fixture(scope="module")
+def mock_db():
+    engine = create_engine("sqlite:///:memory:")
+    session = sessionmaker(bind=engine)
+    Base.metadata.create_all(engine)
+    return engine, session()
 
 
-@pytest.fixture
-def foodict(fooinst):
-    return {i: fooinst for i in range(3)}
+@pytest.fixture(scope="module")
+def foodb(mock_db):
+    _, session = mock_db
+    session.add(FooTableClass())
+    session.add(FooTableClass(thing1=999, thing2="bar"))
+    session.add(FooTableClass(thing1=0, thing2=""))
+    return session
 
 
-@pytest.fixture
-def foodictfactory():
-    factory = DictNodeFactory()
-    factory
+class TestTableNode:
+    @pytest.fixture(scope="class")
+    def tablenode(self, foodb):
+        node = TableNode(foodb, FooTableClass)
 
+        return node
 
-class TestDictNodes:
-    def test_basic(self, foodict):
-        node = DictNode()
-        node.apply(foodict)
-        assert len(node) == len(foodict)
+    def test_children(self, tablenode):
+        assert len(tablenode.children) == 3
 
 
 def _walk_to(model, *children):
-    """Given a list of children from the root, return
-    the index for that given
+    """
+    Given a list of children arguments specified relative from the root, return
+    the corresponding tail of ``QModelIndex`` instance.
 
+    For example, given a balanced ternary tree of height 3 and a path
+    ``[0, 1, 2, 1]`` returns the index for the leaf node if one traverses the
+    0th (left-most) child, 1st (middle) child, 2nd (right-most), and 1st (leaf)
+    child.
     """
     index = QModelIndex()
     for i, child_i in enumerate(children):
@@ -169,31 +153,43 @@ def _walk_to(model, *children):
 
 
 @pytest.fixture(scope="module")
-def big_node_tree():
-    return Node(Node(Node(text="foo"), Node(text="bar"), Node(text="baz")),
-                Node(text="spam"), Node(text="eggs"),
-                Node(Node(text="a"), Node(text="b"), Node(text="c")),
-                Node(Node(Node(Node()))))
+def big_fixed_node_tree():
+    tree = FixedNode(
+        FixedNode(
+            FixedNode(text="foo"),
+            FixedNode(text="bar"),
+            FixedNode(text="baz")),
+        FixedNode(text="spam"),
+        FixedNode(text="eggs"),
+        FixedNode(
+            FixedNode(text="a"),
+            FixedNode(text="b"),
+            FixedNode(text="c")),
+        FixedNode(FixedNode(FixedNode(FixedNode()))))
+    return tree
 
 
 @pytest.fixture(scope="module")
-def tree_model(big_node_tree):
-    return TreeModel(big_node_tree)
+def tree_model(big_fixed_node_tree):
+    return TreeModel(big_fixed_node_tree)
 
 
-class TestBasicTreeModel:
+class TestTreeModelProperties:
+    """
+    Test some non-node related functionality.
+    """
     def test_title_header_data(self):
-        model = TreeModel(Node(), title="FooHeader")
+        model = TreeModel(FixedNode(), title="FooHeader")
         assert model.headerData(0, Qt.Horizontal) == "FooHeader"
         assert model.headerData(0, Qt.Vertical) == QVariant()
 
     def test_flags(self):
-        model = TreeModel(Node())
+        model = TreeModel(FixedNode())
         assert model.flags(QModelIndex()) == (
             Qt.ItemIsEnabled | Qt.ItemIsSelectable)
 
 
-class TestNodeTreeModel:
+class TestFixedNodeTreeModel:
     def test_root(self, tree_model):
         assert tree_model.columnCount() == 1
         assert tree_model.rowCount() == 5
@@ -219,21 +215,12 @@ class TestNodeTreeModel:
 
     def test_parent_root(self, tree_model):
         for i in range(tree_model.rowCount(QModelIndex())):
-            assert _walk_to(tree_model, i).parent() == QModelIndex()
+            supposed_root_index = _walk_to(tree_model, i).parent()
+            assert QModelIndex() == supposed_root_index
 
     def test_parent_nonroot(self, tree_model):
         assert _walk_to(tree_model, 0, 0).parent() == _walk_to(tree_model, 0)
         assert _walk_to(tree_model, 0, 1).parent() == _walk_to(tree_model, 0)
-
-
-class FooClass:  # FIXME duplicated in model/test/test_tree.py
-    def __init__(self):
-        self.i = 1
-        self.s = "str"
-        self.l = ["foo", 42]
-
-    def __str__(self):
-        return self.s
 
 
 class FooContainer:
@@ -243,12 +230,7 @@ class FooContainer:
 
 @pytest.fixture
 def attr_tree():
-    foo = FooContainer()
-    c1 = AttrNode("attr1")
-    c2 = AttrNode("attr2")
-    root = Node(c1, c2)
-    root.apply(foo)
-    return root
+    return AttrNode(FooContainer, "attr1", "attr2")
 
 
 @pytest.fixture
@@ -263,7 +245,7 @@ class TestAttrNodeTreeModel:
 
     def test_list_attrnode(self, attr_model):
         index = _walk_to(attr_model, 1)
-        assert attr_model.rowCount(index) == 2
+        assert attr_model.rowCount(index) == 0
 
     def test_nested_attrnode(self, attr_model):
         index = _walk_to(attr_model, 1, 0)
@@ -271,26 +253,36 @@ class TestAttrNodeTreeModel:
                 index) == "str", "the AttrNode children should be Nodes implicitly using __str__"
 
 
-class TestMixedNodeTreeModel:
+class TestTableNodeTreeModel:
+    @pytest.fixture(scope="class")
+    def foomodel(self, foodb):
+        root = TableNode(foodb, FooTableClass, text="Foo")
+        model = TreeModel(root)
+        return model
+
+    def test_row_count(self, foomodel):
+        assert 3 == foomodel.rowCount(QModelIndex())
+
+    @pytest.mark.parametrize('child_i,expected', enumerate(["foo", "bar", ""]))
+    def test_displayrole(self, foomodel, child_i, expected):
+        index = foomodel.index(child_i, 0, QModelIndex())
+        assert expected == foomodel.data(index)
+
+
+
+class TestColumnDelegates:
     def test_thing(self):
         class FooCampaign:
             regional_maps = ["r0", "r1", "r2"]
             encounter_maps = ["e0", "e1", "e2", "e3"]
             sessions = [1, 2, 3, 4, 5]
 
-        map_node = Node(AttrNode("regional_maps", text="Regional"),
-                        AttrNode("encounter_maps", text="Encounters"),
-                        text="Maps")
-        session_node = AttrNode("sessions")
-
-        root = Node()
-        root.add_child(map_node)
-        root.add_child(session_node)
-        root.apply(FooCampaign)
+        root = AttrNode(FooCampaign, "regional_maps", "encounter_maps",
+                        "sessions")
 
         model = TreeModel(root)
 
-        assert model.rowCount(QModelIndex()) == 2
+        assert model.rowCount(QModelIndex()) == 3
         assert model.rowCount(_walk_to(model, 0)) == 2
         assert model.rowCount(_walk_to(model, 1)) == 5
 
