@@ -240,8 +240,6 @@ class CampaignController:
         self._engine = create_engine("sqlite://{}".format(campaign_db_path))
         self._Session = sessionmaker(engine=self._engine)
 
-        # FIXME this does not belong here...
-        self.delphi.init_database(campaign.id)
 
         self.view = CampaignWindow(self.campaign)
         self.map_controller = None
@@ -264,9 +262,19 @@ class CampaignController:
         return os.path.join(TMP_PATH, str(campaign.id))
 
     @staticmethod
-    def database_path(campaign):
+    def extracted_archive_path(campaign):
         return os.path.join(CampaignController.working_directory(campaign),
+                            "archive")
+
+    @staticmethod
+    def database_path(campaign):
+        return os.path.join(CampaignController.extracted_archive_path(campaign),
                             "database.sqlite")
+
+    @staticmethod
+    def search_database_path(campaign):
+        return os.path.join(CampaignController.working_directory(campaign),
+                            "oracle")
 
     def _init_subcontrollers(self):
         self.map_controller = MapController(self)
@@ -276,6 +284,8 @@ class CampaignController:
 
         self.search_controller = SearchController(self.delphi,
                                                   SearchCompleter())
+        search_db_path = CampaignController.search_database_path(self.campaign)
+        self.delphi.init_database(search_db_path)
 
     def _init_view(self):
         sc = self.search_controller

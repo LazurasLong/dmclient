@@ -27,7 +27,6 @@ to the oracle, you must first travel to Delphi  :)
 import signal
 import sys
 import threading
-from concurrent.futures import ThreadPoolExecutor
 from itertools import product
 from logging import getLogger
 from multiprocessing import Pipe, Process
@@ -47,8 +46,8 @@ if __debug__:
 
         """
         for module_name, bad_module in product(sys.modules.keys(), bad_modules):
-            assert bad_module not in module_name, \
-                "{} was in sys.modules ({})".format(bad_module, sys.modules)
+            assert bad_module not in module_name, "{} was in sys.modules ({})".format(
+                bad_module, sys.modules)
 else:
     def process_sanity_check():
         pass
@@ -56,10 +55,14 @@ else:
 
 class Zygote:
     """
-    A captured state of a process that is suitable for forking multiple times.
+    A captured state of a process that is suitable for forking multiple times as
+    a "cloned child" of the zygote.
 
     The oracle is expected to choke on PDF inputs now and then, and it also
     makes sense to spin up a restartable process separate from the main one.
+
+    Zygotes do not clean up their cloned children, instead ownership is
+    implicitly transferred upon creation.
     """
 
     def __init__(self, target, args, name):
@@ -72,17 +75,17 @@ class Zygote:
         # Zygote state
         self.current_spawn = None
 
-    def capture(self, oracle_connection):
+    def capture(self, hacky_delphiconn, oracle_connection):
         """
         Capture the current state of the process, forking off a new child
         with which to communicate.
         """
+        print("creating process")
         self.egg_pipe = Pipe()
-        self.egg = Process(target=self.zygote_main,
-                           name="{} Zygote".format(self.name),
-                           args=(self.egg_pipe[1], oracle_connection))
+        self.egg = Process(target=self._zygote_main,
+                           name="{} Zygote".format(self.name), args=(
+            self.egg_pipe[1], hacky_delphiconn, oracle_connection))
         self.egg.start()
-        return self.egg.pid
 
     def spawn(self):
         """
@@ -94,31 +97,42 @@ class Zygote:
         return self.egg_pipe[0].recv()
 
     def kill(self):
-        self.egg.terminate()
+        self.egg_pipe[0].send("quit")
         self.egg.join()
 
-    def zygote_main(self, egg_connection, oracle_connection):
-        dispatch = lambda sig, frame: self.zygote_sighandler(sig, frame)
-        signal.signal(signal.SIGTERM, dispatch)
-        signal.signal(signal.SIGSEGV, dispatch)
+    def _zygote_main(self, eggconn, *args, **kwargs):
+        return sys.exit(self.zygote_main(eggconn, *args, **kwargs))
+
+    def zygote_main(self, eggconn, delphiconn, oracleconn):  # FIXME delphi hack
+        sighandler = lambda sig, frame: self.zygote_sighandler(sig, frame)
+        for sig in (signal.SIGTERM, signal.SIGSEGV):
+            signal.signal(sig, sighandler)
         try:
             while 1:
-                if egg_connection.poll(1):
-                    cmd = egg_connection.recv()
-                    if cmd != "spawn":
+                if eggconn.poll(1):
+                    cmd = eggconn.recv()
+                    if cmd == "quit":
+                        delphiconn.send("quit")  # FIXME hack
+                        print("waiting on children to die, this may take a while")
+                        self.current_spawn.join()
+                        return 0
+                    elif cmd == "spawn":
+                        pid = self.zygote_spawn(oracleconn)
+                        eggconn.send("spawn {}".format(pid))
+                    else:
                         print("not sure what to do with this command.")
                         continue
-                    pid = self.zygote_spawn(oracle_connection)
-                    egg_connection.send(pid)
+                if self.current_spawn and not self.current_spawn.is_alive():
+                    print("warning: I detected dead eggs")
+                    self.current_spawn = None
         except KeyboardInterrupt:
-            egg_connection.send("told to quit")
+            eggconn.send("told to quit")
 
     def zygote_spawn(self, oracle_connection):
         if self.current_spawn and self.current_spawn.is_alive():
             log.error("asked to spawn when current is still alive!")
             return
-        self.current_spawn = Process(target=self.target,
-                                     name=self.name,
+        self.current_spawn = Process(target=self.target, name=self.name,
                                      args=(self.args, oracle_connection))
         self.current_spawn.start()
         return self.current_spawn.pid
@@ -128,7 +142,7 @@ class Zygote:
             print("seg fault in zygote", file=sys.stderr)
             sys.exit(1)
         elif signum == signal.SIGTERM:
-            print("goodbye")
+            print("got SIGTERM")
             sys.exit(0)
         else:
             print("error: i don't know what to do", file=sys.stderr)
@@ -136,11 +150,12 @@ class Zygote:
 
 
 def delphi_main_thing(args, oracle_connection):
-    module_sanity_check()
+    # FIXME(!!): This isn't working.
+    # module_sanity_check()
     # import done here to avoid polluting dmclient's process
     # (it never has any need for stuff like xapian)
     try:
-        from .oracle import oracle_main
+        from .oracle import main as oracle_main
         oracle_main(args, oracle_connection)
     except KeyboardInterrupt:
         sys.exit(0)
@@ -155,15 +170,11 @@ class DummyDelphi:
 
     """
 
-    def __init__(self, args=None):
-        """
-
-        :param args:  Unused.
-        """
+    def __init__(self, *_, **__):
         self.enabled = True
         self.documents = []
 
-    def init_database(self, id):
+    def init_database(self, _):
         pass
 
     def search_query(self, query):
@@ -215,8 +226,8 @@ class Delphi:
     # oracle API dispatch.
     #
 
-    def init_database(self, id):
-        self._send_message("init_database %s", id)
+    def init_database(self, path):
+        self._send_message("init_database %s", path)
 
     def index(self, uuid, path):
         log.debug("Delphi requested to index external: (%s, %s)", uuid, path)
@@ -246,7 +257,8 @@ class Delphi:
 
     def start(self):
         self.keep_going = True
-        pid = self.zygote.capture(self.oracle_connection)
+        pid = self.zygote.capture(self.delphi_connection,  # FIXME
+                                  self.oracle_connection)
         self.listen_thread = threading.Thread(target=self.listen_loop,
                                               name="delphi")
         self.listen_thread.start()
@@ -274,5 +286,4 @@ class Delphi:
     #
 
     def _send_message(self, message, *args):
-        encoded_message = (message % args).encode()
-        self.delphi_connection.send(encoded_message)
+        self.delphi_connection.send(message % args)

@@ -29,13 +29,11 @@ oracle subprocess, _not_ the primary dmclient process.
 """
 import importlib
 import logging
-import os
 import sys
 from threading import Lock, Thread
 
 import xapian
 
-from core.config import TMP_PATH
 from oracle.index import Indexer
 from oracle.search import Searcher
 
@@ -80,9 +78,15 @@ class Oracle:
     database_prefix = "dmoracle"
     database_suffix = "xapian.db"
 
-    def __init__(self, delphi_pipe, indexer, searcher):
+    def __init__(self, delphi_conn, indexer, searcher):
+        """
+
+        :param delphi_conn: The oracle's connection to Delphi.
+        :param indexer:
+        :param searcher:
+        """
         self.thread = Thread(target=self.run, name="listener")
-        self.delphi_pipe = delphi_pipe
+        self.delphi_conn = delphi_conn
         self.indexer = indexer
         self.searcher = searcher
 
@@ -90,8 +94,7 @@ class Oracle:
     # Oracle endpoint implementation.
     #
 
-    def init_database(self, id):
-        database_path = self._database_path(id)
+    def init_database(self, database_path):
         xdb = xapian.WritableDatabase(database_path,
                                       xapian.DB_CREATE_OR_OVERWRITE)
         database = OracleDatabase(xdb)
@@ -101,8 +104,7 @@ class Oracle:
     def ack(self, ack):
         if ack != "ack":
             log.warning("ack is not ack...")
-        out, in_ = self.delphi_pipe
-        out.send("hello")
+        self.delphi_conn.send("hello")
 
     def index(self, path):
         self.indexer.pending.put(path)
@@ -110,15 +112,18 @@ class Oracle:
     def search(self, *query):
         self.searcher.pending.put(' '.join(query))
 
+    def quit(self):
+        sys.exit(0)
+
     #
     # Threading magic.
     #
 
     def run(self):
-        conn = self.delphi_pipe
+        conn = self.delphi_conn
         while 1:
             try:
-                cmdstr = conn.recv().decode()
+                cmdstr = conn.recv()
                 log.debug("received command: `%s'", cmdstr)
 
                 cmd, *args = cmdstr.split(' ')
@@ -135,19 +140,8 @@ class Oracle:
             except UnicodeDecodeError as e:
                 log.error("error receiving command: %s", e)
 
-    #
-    # Helper methods
-    #
 
-    @classmethod
-    def _database_path(cls, id):
-        database_name = "{}-{}-{}".format(cls.database_prefix,
-                                          id,
-                                          cls.database_suffix)
-        return os.path.join(TMP_PATH, database_name)
-
-
-def oracle_main(args, conn):
+def main(args, conn):
     """
     :param args: CLI arguments for oracle process
     :param conn: The ``Connection`` object that lets us
@@ -171,3 +165,8 @@ def oracle_main(args, conn):
         indexer.thread.join()
 
     sys.exit(0)
+
+
+# TODO
+# if __name__ == '__main__':
+#     main()
