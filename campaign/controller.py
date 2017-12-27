@@ -342,11 +342,11 @@ class CampaignController:
 
     def on_campaign_properties(self):
         dlg = CampaignPropertiesDialog(self.campaign, self.view)
-        dlg.accepted.connect(self.on_properties_update)
+        dlg.accepted.connect(lambda: self.on_properties_update(dlg))
         dlg.show()
 
-    def on_properties_update(self):
-        options = self.properties_dialog.options
+    def on_properties_update(self, propdlg):
+        options = propdlg.options
         for k, v in options.items():
             setattr(self.campaign, k, v)
         self.view.setWindowTitle(self.campaign.name)
