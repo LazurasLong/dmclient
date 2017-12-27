@@ -25,7 +25,6 @@
 
 import tarfile
 from json import JSONDecodeError
-from logging import getLogger
 
 from sqlalchemy import Column, String
 
@@ -33,11 +32,10 @@ from model import DescribableMixin, GameBase
 from model.schema import *
 
 __all__ = ["InvalidArchiveError", "InvalidSessionError", "ArchiveMeta",
-           "InvalidArchiveMetadataError", "open_archive", "open_campaign"]
+           "InvalidArchiveMetadataError", "open_archive", "open_campaign",
+           "update_archive", "export_archive"]
 
 _open = open
-
-log = getLogger(__name__)  # TODO archives should not require logging.
 
 
 class InvalidArchiveError(Exception):
@@ -61,13 +59,35 @@ def open_campaign(path):
 
 
 def open_archive(path):
-    schema = ArchiveMetaSchema()
     return ArchiveMeta.load(path)
 
 
 def unpack_archive(meta, destination):
     with tarfile.open(meta.last_seen_path, "r:bz2") as f:
         f.extractall(destination)
+
+
+def export_archive(meta, src, dst):
+    """
+    Export an archive's contents. Suitable for ``Save as`` operations.
+
+    :param meta: The archive meta.
+    :param src: The source working directory to package into an archive.
+    :param dst: The destination filename to export to.
+    """
+    with tarfile.open(dst, mode="x:bz2") as tf:
+        tf.add(src)
+
+
+def update_archive(meta, src, dst):
+    """
+    Update the archive at ``dst`` in-place.
+    :param meta: The archive meta.
+    :param dst: The destination filename to export to.
+    """
+    # TODO be more intelligent about this.
+    with tarfile.open(dst, mode="w:bz2") as tf:
+        tf.add()
 
 
 class ArchiveMeta:
@@ -97,7 +117,8 @@ class ArchiveMeta:
                 meta.last_seen_path = path
                 return meta
         except (tarfile.ReadError, EOFError, JSONDecodeError):
-            raise InvalidArchiveMetadataError("invalid meta for {}".format(path))
+            raise InvalidArchiveMetadataError(
+                "invalid meta for {}".format(path))
 
 
 class ArchiveMetaSchema(Schema):
@@ -134,11 +155,11 @@ def _parse_json(f, schemacls):
     try:
         obj, errors = schema.loads(f.read())
         if errors:
-            log.debug("validation errors: %s", errors)
-            raise JSONDecodeError("schema validation failed", "", 0)
+            raise JSONDecodeError("schema validation failed {}".format(errors),
+                                  "", 0)
         return obj
-    except ValueError:
-        raise JSONDecodeError("", "", pos=0)
+    except ValueError as e:
+        raise JSONDecodeError("failed to decode JSON: {}".format(e), "", pos=0)
 
 
 class InvalidArchiveMetadataError(InvalidArchiveError):

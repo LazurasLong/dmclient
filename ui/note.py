@@ -8,14 +8,16 @@ class NoteEditorDialog(QDialog):
         self.note = note
         self.db = db
 
+        self.setWindowTitle(note.name)
+
         self.timer = QTimer(self)
         self.timer.setObjectName("timer")
         self.timer.setInterval(4000)
         self.timer.setSingleShot(True)
 
         self.editor = QPlainTextEdit(self)
-        self.editor.textChanged.connect(self.timer.start)
         self.editor.setPlainText(note.text)
+        self.editor.textChanged.connect(self.timer.start)
 
         layout = QVBoxLayout()
         layout.addWidget(self.editor)

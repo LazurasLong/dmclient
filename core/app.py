@@ -217,7 +217,7 @@ class AppController(QObject):
         meta, campaign_path = result
         self._clear_main_window()
         campaign = self._create_campaign(meta)
-        self._init_cc(campaign)
+        self._init_cc(campaign, meta)
 
     def _clear_main_window(self):
         self.main_window.hide()
@@ -233,10 +233,10 @@ class AppController(QObject):
         campaign.revision_date = datetime.now()
         return campaign
 
-    def _init_cc(self, campaign):
+    def _init_cc(self, campaign, archive_meta=None):
         assert self.main_window is None
         # TODO: Ensure that the previous campaign was flushed out (i.e., tmp)
-        cc = self.cc = CampaignController(campaign, self.delphi)
+        cc = self.cc = CampaignController(self.delphi, campaign, archive_meta)
         window = cc.view
         window.show()
         window.raise_()

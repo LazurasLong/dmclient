@@ -24,13 +24,15 @@ from PyQt5.QtWidgets import QMenu
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from campaign import Player, CampaignSession
+from campaign import Player
 from campaign.note import ExternalNote, Note, InternalNote
 from core import filters
+from core.archive import export_archive
 from core.config import TMP_PATH
 from model import GameBase
-from model.tree import FixedNode, TableNode, TreeModel, TreeNode, BadNode
-from ui import get_open_filename, display_error
+from model.tree import FixedNode, TableNode, TreeModel, BadNode
+from ui import get_open_filename, display_error, get_save_filename, \
+    display_warning
 from ui.battlemap.controls import ControlScheme
 from ui.battlemap.widgets import RegionalMapView
 from ui.campaign import CampaignPropertiesDialog, CampaignWindow
@@ -287,10 +289,13 @@ class CampaignController(QObject):
     to be handled externally, e.g. by the ``AppController`` or test harnesses.
     """
 
-    def __init__(self, campaign, delphi):
+    def __init__(self, delphi, campaign, archive_meta=None):
         super().__init__(None)
-        self.campaign = campaign
         self.delphi = delphi
+        self.campaign = campaign
+        self.archive_meta = archive_meta
+
+        self.dirty = True
 
         campaign_db_path = self.database_path(campaign)
         self._engine = create_engine("sqlite:///{}".format(campaign_db_path), echo=True)
@@ -361,6 +366,9 @@ class CampaignController(QObject):
         sc = self.search_controller
         v = self.view
 
+        v.save_campaign.triggered.connect(self.on_sync_campaign)
+        v.save_campaign_as.triggered.connect(self.on_save_campaign_as)
+
         v.searchEdit.textChanged.connect(sc.on_search_text_changed)
         v.searchEdit.returnPressed.connect(sc.on_search_requested)
 
@@ -401,6 +409,27 @@ class CampaignController(QObject):
         context_menu.exec(controller.view.mapToGlobal(point))
 
     @pyqtSlot()
+    def on_sync_campaign(self):
+        am = self.archive_meta
+        if not am:
+            self._save_campaign_as()
+            return
+        if am.last_seen_path and not os.path.exists(am.last_seen_path):
+            display_warning(self.view, "The campaign archive appears to have "
+                                       "been moved or deleted.\n\nPlease "
+                                       "select a new location to save this "
+                                       "archive.")
+            am.last_seen_path = self._save_campaign_as()
+            return
+        raise NotImplementedError
+
+    @pyqtSlot()
+    def on_save_campaign_as(self):
+        # Do not update the "last seen" path,
+        # this is presumably for making a copy.
+        self._save_campaign_as()
+
+    @pyqtSlot()
     def on_campaign_properties(self):
         dlg = CampaignPropertiesDialog(self.campaign, self.view)
         dlg.accepted.connect(self.on_properties_update(dlg))
@@ -413,3 +442,18 @@ class CampaignController(QObject):
             setattr(self.campaign, k, v)
         self.view.setWindowTitle(self.campaign.name)
         self.properties_dialog = None
+
+    def _save_campaign_as(self):
+        path = get_save_filename(self.view, "Save campaign as",
+                                 filter_=filters.campaign)
+        if not path:
+            return
+        try:
+            export_archive(self.archive_meta,
+                           CampaignController.extracted_archive_path(self.campaign),
+                           path)
+        except OSError as e:
+            log.error("could not export campaign: %s", e)
+        else:
+            return path
+
