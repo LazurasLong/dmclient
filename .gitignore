@@ -28,3 +28,4 @@ doc/src
 doc/html
 
 /build/
+/dist/

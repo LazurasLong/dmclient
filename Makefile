@@ -41,6 +41,8 @@ endif
 
 # Recipe configuration
 
+PYTHON=python3.6
+
 RM=rm -f
 
 PYUIC=pyuic5
@@ -137,7 +139,7 @@ $(ui_files): $(ui_dirinit)
 $(ui_dirinit): $(ui_dirs)
 
 PHONY+=clean $(sub_clean)
-sub_clean = clean-docs clean-pycache clean-resources clean-ui
+sub_clean = clean-docs clean-pycache clean-resources clean-ui clean-app
 clean: $(sub_clean)
 
 clean-docs:
@@ -154,6 +156,13 @@ clean-testarchives:
 
 clean-ui:
 	find ui/widgets \( -not -wholename ui/widgets -and -not -wholename ui/widgets/__init__.py \) -delete
+
+clean-app:
+	$(RM) -r build
+
+PHONY: app
+app:
+	$(PYTHON) setup.py py2app
 
 
 # General targets
