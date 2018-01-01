@@ -14,6 +14,7 @@ from core.archive import PropertiesSchema, InvalidArchiveError, open_archive, \
     ArchiveMeta, unpack_archive
 from game import GameSystem
 from model.qt import SchemaTableModel
+from oracle import DummyDelphi, Delphi
 from ui import display_error, get_open_filename, LoadingDialog
 from ui.campaign import NewCampaignDialog
 
@@ -123,26 +124,29 @@ def shutdown_method(f):
     Note: I tried making this a part of ``AppController`` because it's the only
     place where this is currently used. It works, but PyCharm gets very upset.
     """
+
     def wrapped(self, *args):
         try:
             f(self, *args)
         except OSError as e:
             log.exception("failed to shutdown: %s", e)
+
     return wrapped
 
 
 class AppController(QObject):
     game_config_path = os.path.join(core.config.CONFIG_PATH, "gamesystems")
 
-    def __init__(self, qapp, delphi):
+    def __init__(self, args, qapp, oracle_zygote):
         """
 
         :param qapp: A ``QApplication`` instance (avoids global var shenanigans)
         :param delphi:
         """
         super().__init__(qapp)
+        self.args = args
         self.qapp = qapp
-        self.delphi = delphi
+        self.oracle_zygote = oracle_zygote
         self.cc = None
         self.thread_pool = QThreadPool()
         self.games = GameSystemManager()
@@ -210,7 +214,8 @@ class AppController(QObject):
     def on_campaign_loaded(self):
         result = self.main_window.task.result
         if not result:
-            log.exception("failed to load campaign: %s", self.main_window.task.exception)
+            log.exception("failed to load campaign: %s",
+                          self.main_window.task.exception)
             display_error(self.main_window, "The campaign could not be loaded.")
             self.show_new_campaign()
             return
@@ -235,14 +240,22 @@ class AppController(QObject):
 
     def _init_cc(self, campaign, archive_meta=None):
         assert self.main_window is None
+        if self.args.disable_oracle:
+            delphi = DummyDelphi()
+        else:
+            delphi = Delphi(self.oracle_zygote)
+
         # TODO: Ensure that the previous campaign was flushed out (i.e., tmp)
-        cc = self.cc = CampaignController(self.delphi, campaign, archive_meta)
+        cc = self.cc = CampaignController(delphi, campaign, archive_meta)
         window = cc.view
         window.show()
         window.raise_()
         window.check_for_updates.triggered.connect(self.on_check_updates)
         window.quit.triggered.connect(self.qapp.quit)
         self.main_window = window
+        delphi.start(CampaignController.database_path(campaign),
+                     CampaignController.xapian_database_path(campaign),
+                     cc.search_controller)
 
     def shutdown(self):
         """
@@ -250,8 +263,16 @@ class AppController(QObject):
         have been validated and ensured, because at this point the ship is
         being doused with kerosine and there's nothing that can stop it  :)
         """
+        self._raze_delphi()
         self._flush_game_config()
         self._clear_campaign_temp_files()
+
+    @shutdown_method
+    def _raze_delphi(self):
+        # FIXME this is a dumpster fire
+        if self.cc:
+            self.cc.delphi.shutdown()
+        self.oracle_zygote.kill()
 
     @shutdown_method
     def _flush_game_config(self):

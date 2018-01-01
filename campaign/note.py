@@ -2,9 +2,10 @@
 Document management. Roleplaying games tend to involve a lot of notetaking,
 in a variety of formats such as plain-text, PDF, or DOCX.
 """
-from datetime import datetime
-
 import os
+from datetime import datetime
+from urllib.parse import urlparse
+
 from sqlalchemy import Column, String, ForeignKey, Integer
 
 from model import GameBase
@@ -16,12 +17,20 @@ class Note(GameBase):
     id = Column(Integer, primary_key=True)
     name = Column(String, default="Untitled Note")
     author = Column(String)
+    url = Column(String)
 
     def __str__(self):
         return self.name
 
+    @property
+    def type(self):
+        return urlparse(self.url).scheme
+
 
 class InternalNote(GameBase):
+    """
+    Internal notes are just plain-text, which is why they have a text entry.
+    """
     __tablename__ = "internal_note"
 
     id = Column(Integer, primary_key=True)
@@ -32,7 +41,8 @@ class InternalNote(GameBase):
 class ExternalNote(GameBase):
     """
     A ``NoteReference`` is a note external to dmclient on some provider, such as
-    the local filesystem or a cloud storage service.
+    the local filesystem or a cloud storage service. They require a *provider*
+    delegate for their textual representation.
 
     This class is abstract.
     """
@@ -40,7 +50,6 @@ class ExternalNote(GameBase):
 
     id = Column(Integer, primary_key=True)
     note_id = Column(Integer, ForeignKey('note.id'))
-    url = Column(String)
 
     @property
     def creation_date(self):

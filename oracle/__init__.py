@@ -17,26 +17,26 @@
 
 from logging import getLogger
 
-from oracle.delphi import Delphi, DummyDelphi
+from core.zygote import Zygote
+from oracle.delphi import Delphi, DummyDelphi, delphi_main_thing
 
+__all__ = ["spawn_oracle", "spawn_zygote"]
 
 log = getLogger("delphi")
 
 
-class Document:
+def spawn_zygote(args):
     """
-    Lightweight value-object containing information about a document. Intended
-    to be passed around between the oracle and dmclient as-needed.
+    :param args: arguments to construct the oracle zygote with
+    :return: A zygote that can be passed into ``spawn_oracle()``.
     """
-    def __init__(self):
-        self.id = None
-        self.type = None
-        self.title = None
-        self.author = None
-        self.last_indexed = None
+    zygote = Zygote(target=delphi_main_thing, name="dmoracle", args=args)
+    zygote.capture()
+    log.debug("zygote spawned, pid = %d", zygote.pid)
+    return zygote
 
 
-def spawn_oracle(args):
+def spawn_oracle(zygote, args):
     """Spawns an Oracle sub-process by forking the current process.
 
     :return: An instance of the `Delphi` class.
@@ -49,4 +49,3 @@ def spawn_oracle(args):
     delphi = Delphi(args)
     delphi.start()
     return delphi
-

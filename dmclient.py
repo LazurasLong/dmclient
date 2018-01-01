@@ -141,9 +141,9 @@ def main():
         init_config()
         config = appconfig()
 
-        log.debug("initialise oracle")
-        from oracle import spawn_oracle
-        delphi = spawn_oracle(args)
+        log.debug("initialise oracle zygote")
+        from oracle import spawn_zygote
+        oracle_zygote = spawn_zygote(args)
 
         log.debug("initialise Qt")
         from PyQt5.QtGui import QIcon
@@ -168,7 +168,7 @@ def main():
 
         log.debug("initialise controllers")
         from core.app import AppController
-        app_controller = AppController(_app, delphi)
+        app_controller = AppController(args, _app, oracle_zygote)
 
         if args.campaign:
             app_controller.load_campaign(args.campaign)
@@ -185,9 +185,6 @@ def main():
         traceback.print_exc(file=sys.stderr)
 
     finally:
-        if delphi:
-            log.debug("razing Delphi to the ground...")
-            delphi.shutdown()
         if app_controller:
             app_controller.shutdown()
         save_config(appconfig())

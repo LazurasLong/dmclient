@@ -347,7 +347,7 @@ class CampaignController(QObject):
         return context_menu
 
     @staticmethod
-    def search_database_path(campaign):
+    def xapian_database_path(campaign):
         return os.path.join(CampaignController.working_directory(campaign),
                             "oracle")
 
@@ -359,8 +359,6 @@ class CampaignController(QObject):
 
         self.search_controller = SearchController(self.delphi,
                                                   SearchCompleter())
-        search_db_path = CampaignController.search_database_path(self.campaign)
-        self.delphi.init_database(search_db_path)
 
     def _init_view(self):
         sc = self.search_controller

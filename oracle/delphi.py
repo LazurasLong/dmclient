@@ -24,12 +24,11 @@ to the oracle, you must first travel to Delphi  :)
     multiple connections to the oracle? Implement that one-to-many mapping.
 
 """
-import signal
 import sys
 import threading
 from itertools import product
 from logging import getLogger
-from multiprocessing import Pipe, Process
+from multiprocessing import Pipe
 
 log = getLogger("delphi")
 
@@ -51,110 +50,6 @@ if __debug__:
 else:
     def process_sanity_check():
         pass
-
-
-class Zygote:
-    """
-    A captured state of a process that is suitable for forking multiple times as
-    a "cloned child" of the zygote.
-
-    The oracle is expected to choke on PDF inputs now and then, and it also
-    makes sense to spin up a restartable process separate from the main one.
-
-    Zygotes do not clean up their cloned children, instead ownership is
-    implicitly transferred upon creation.
-    """
-
-    def __init__(self, target, args, name):
-        self.target = target
-        self.name = name
-        self.args = args
-        # Delphi state
-        self.egg = None
-        self.egg_pipe = None
-        # Zygote state
-        self.current_spawn = None
-        self.respawn_tries = 0
-
-    @property
-    def pid(self):
-        return self.egg.pid
-
-    def capture(self, hacky_delphiconn, oracle_connection):
-        """
-        Capture the current state of the process, forking off a new child
-        with which to communicate.
-        """
-        print("creating process")
-        self.egg_pipe = Pipe()
-        self.egg = Process(target=self._zygote_main,
-                           name="{} Zygote".format(self.name), args=(
-            self.egg_pipe[1], hacky_delphiconn, oracle_connection))
-        self.egg.start()
-
-    def spawn(self):
-        """
-        This method causes the zygote to fork a new process.
-
-        This blocks until that process is created, and returns its PID.
-        """
-        self.egg_pipe[0].send("spawn")
-        return self.egg_pipe[0].recv()
-
-    def kill(self):
-        self.egg_pipe[0].send("quit")
-        self.egg.join()
-
-    def _zygote_main(self, eggconn, *args, **kwargs):
-        return sys.exit(self.zygote_main(eggconn, *args, **kwargs))
-
-    def zygote_main(self, eggconn, delphiconn, oracleconn):  # FIXME delphi hack
-        sighandler = lambda sig, frame: self.zygote_sighandler(sig, frame)
-        for sig in (signal.SIGTERM, signal.SIGSEGV):
-            signal.signal(sig, sighandler)
-        try:
-            while 1:
-                if eggconn.poll(1):
-                    cmd = eggconn.recv()
-                    if cmd == "quit":
-                        delphiconn.send("quit")  # FIXME hack
-                        self.current_spawn.join()
-                        return 0
-                    elif cmd == "spawn":
-                        self.zygote_spawn(eggconn, oracleconn)
-                    else:
-                        print("not sure what to do with this command.")
-                        continue
-                if self.current_spawn and not self.current_spawn.is_alive():
-                    print("warning: I detected dead eggs")
-                    # TODO: prevent infinite loops, but let this counter reset
-                    #       at some point.
-                    self.current_spawn = None
-                    if self.respawn_tries < 3:
-                        self.respawn_tries += 1
-                        self.zygote_spawn(eggconn, oracleconn)
-        except KeyboardInterrupt:
-            eggconn.send("told to quit")
-
-    def zygote_spawn(self, eggconn, oracle_connection):
-        if self.current_spawn and self.current_spawn.is_alive():
-            log.error("asked to spawn when current is still alive!")
-            return
-        self.current_spawn = Process(target=self.target, name=self.name,
-                                     args=(self.args, oracle_connection))
-        self.current_spawn.start()
-        eggconn.send("spawn {}".format(self.current_spawn.pid))
-
-    def zygote_sighandler(self, signum, frame):
-        if signum == signal.SIGSEGV:
-            print("seg fault in zygote", file=sys.stderr)
-            sys.exit(1)
-        elif signum == signal.SIGTERM:
-            print("got SIGTERM")
-            sys.exit(0)
-        else:
-            print("error: i don't know what to do", file=sys.stderr)
-            sys.exit(2)
 
 
 def delphi_main_thing(args, oracle_connection):
@@ -182,7 +77,7 @@ class DummyDelphi:
         self.enabled = True
         self.documents = []
 
-    def init_database(self, _):
+    def init_database(self, _, __):
         pass
 
     def search_query(self, query):
@@ -204,23 +99,15 @@ class Delphi:
 
     listen_timeout = 1
 
-    def __init__(self, responder):
-        """
-
-        :param responder: A listener object that accepts the following::
-            indexing_started()
-            indexing_completed()
-            results_updated()
-            on_error()
-        """
-        self.responder = responder
+    def __init__(self, zygote):
+        self.zygote = zygote
+        self.oracle_pid = None
+        self.responder = None
         self.documents = []
         self.keep_going = False
         self.listen_thread = None
         pipe = Pipe()
         self.delphi_connection, self.oracle_connection = pipe
-        self.zygote = Zygote(target=delphi_main_thing, name="dmoracle",
-                             args=(pipe,))
 
     @property
     def enabled(self):
@@ -230,23 +117,12 @@ class Delphi:
         """
         return True
 
-    #
-    # oracle API dispatch.
-    #
-
-    def init_database(self, path):
-        self._send_message("init_database %s", path)
-
     def index(self, uuid, path):
         log.debug("Delphi requested to index external: (%s, %s)", uuid, path)
         self.responder.indexing_started()
 
     def search_query(self, query):
         self._send_message("search %s", query)
-
-    #
-    # Delphi endpoint methods.
-    #
 
     def error(self):
         """
@@ -257,28 +133,23 @@ class Delphi:
         self.responder.on_error()
 
     def search_completed(self, id, results):
-        log.debug("receieved some completed results for %s: %s", id, results)
+        log.debug("received some completed results for %s: %s", id, results)
 
-    #
-    # Delphi thread methods.
-    #
-
-    def start(self):
+    def start(self, campaign_db_path, xapian_db_path, responder):
+        self.responder = responder
         self.keep_going = True
-        self.zygote.capture(self.delphi_connection,  # FIXME
-                            self.oracle_connection)
         self.listen_thread = threading.Thread(target=self.listen_loop,
                                               name="delphi")
         self.listen_thread.start()
-        log.debug("delphi started, zygote oracle PID = %s" % self.zygote.pid)
-        oracle_pid = self.zygote.spawn()
-        log.debug("spawned oracle PID = %s", oracle_pid)
+        self.oracle_pid = self.zygote.spawn(
+            {"delphi": self.oracle_connection, "campaign": campaign_db_path,
+             "xapian": xapian_db_path})
+        log.debug("delphi started, spawned oracle PID = %d", self.oracle_pid)
 
     def shutdown(self):
         log.debug("shutdown triggered")
         self.keep_going = False
         self.listen_thread.join()
-        self.zygote.kill()
 
     def listen_loop(self):
         log.debug("delphi thread started")
@@ -288,10 +159,6 @@ class Delphi:
             if delphi_connection.poll(timeout):
                 obj = delphi_connection.recv()
                 log.debug("received `%s' from oracle", obj)
-
-    #
-    # Helper methods
-    #
 
     def _send_message(self, message, *args):
         self.delphi_connection.send(message % args)

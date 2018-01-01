@@ -1,15 +1,20 @@
-"""A *search provider* provides the oracle with a source of documents.
+"""
+A *search provider* provides the oracle with a source of documents. Providers
+are composite objects, which models their source, format, and internal
+structure accordingly.
 
-Some examples::
+Some examples of the file formats that different users might have include:
 
-1. Certain components within dmclient
-1. The filesystem
-1. External cloud services (e.g. Google Drive)
+- Certain components within dmclient, such as character sheets.
+- A plain-text file on a local filesystem, formatted according to
+  *reStructuredText*.
+- A plain-text file on a cloud service formatted in Markdown.
+- External cloud services (e.g. Google Drive's native document format)
 
-It's a bit weird, since some providers exist within the main dmclient process.
-This is to gain access to the Python objects directly. It was faster to
-implement but might cause issues? Other providers (such as the PDF and
-Google Drive) exist in the oracle process.
+Documents can reference other documents in dmclient using a special URL
+format, beginning with ``dmc://`` and then the identifier of the document.
+This can be copied from dmclient or inserted using its (eventual) rich text
+editor.
 
 """
 
