@@ -26,8 +26,7 @@ from sqlalchemy.orm import sessionmaker
 
 from campaign import Player
 from campaign.note import ExternalNote, Note, InternalNote
-from core import filters
-from core.archive import export_archive
+from core import filters, archive
 from core.config import TMP_PATH
 from model import GameBase
 from model.tree import FixedNode, TableNode, TreeModel, BadNode
@@ -447,7 +446,7 @@ class CampaignController(QObject):
         if not path:
             return
         try:
-            export_archive(self.archive_meta,
+            archive.export(self.archive_meta,
                            CampaignController.extracted_archive_path(self.campaign),
                            path)
         except OSError as e:

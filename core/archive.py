@@ -23,17 +23,19 @@
     ``os.path.join()``.
 """
 
+import os
 import tarfile
 from json import JSONDecodeError
 
+from io import BytesIO
 from sqlalchemy import Column, String
 
 from model import DescribableMixin, GameBase
 from model.schema import *
 
 __all__ = ["InvalidArchiveError", "InvalidSessionError", "ArchiveMeta",
-           "InvalidArchiveMetadataError", "open_archive", "open_campaign",
-           "update_archive", "export_archive"]
+           "InvalidArchiveMetadataError", "open", "open_campaign",
+           "update_archive", "export", "unpack"]
 
 _open = open
 
@@ -55,19 +57,19 @@ class InvalidSessionError(InvalidArchiveError):
 
 
 def open_campaign(path):
-    return open_archive(path)
+    return open(path)
 
 
-def open_archive(path):
+def open(path):
     return ArchiveMeta.load(path)
 
 
-def unpack_archive(meta, destination):
+def unpack(meta, destination):
     with tarfile.open(meta.last_seen_path, "r:bz2") as f:
         f.extractall(destination)
 
 
-def export_archive(meta, src, dst):
+def export(meta, src, dst):
     """
     Export an archive's contents. Suitable for ``Save as`` operations.
 
@@ -75,19 +77,22 @@ def export_archive(meta, src, dst):
     :param src: The source working directory to package into an archive.
     :param dst: The destination filename to export to.
     """
-    with tarfile.open(dst, mode="x:bz2") as tf:
-        tf.add(src)
-
-
-def update_archive(meta, src, dst):
-    """
-    Update the archive at ``dst`` in-place.
-    :param meta: The archive meta.
-    :param dst: The destination filename to export to.
-    """
-    # TODO be more intelligent about this.
+    if not src.endswith('/'):
+        src += '/'
     with tarfile.open(dst, mode="w:bz2") as tf:
-        tf.add()
+        schema = ArchiveMetaSchema()
+        json = str(schema.dumps(meta).data).encode()
+        ti = tarfile.TarInfo("properties.json")
+        ti.size = len(json)
+        tf.addfile(ti, fileobj=BytesIO(json))
+        for (dirpath, dirnames, filenames) in os.walk(src):
+            for dirname in dirnames:
+                tf.add(os.path.join(dirpath, dirname), dirname)
+            for filename in filenames:
+                full_path = os.path.join(dirpath, filename)
+                tf.add(full_path, filename)
+            # Hacky? Tarfile recursively adds the dirs.
+            break
 
 
 class ArchiveMeta:
@@ -116,9 +121,10 @@ class ArchiveMeta:
                                    ArchiveMetaSchema)
                 meta.last_seen_path = path
                 return meta
-        except (tarfile.ReadError, EOFError, JSONDecodeError):
-            raise InvalidArchiveMetadataError(
-                "invalid meta for {}".format(path))
+        except JSONDecodeError as e:
+            raise InvalidArchiveMetadataError("invalid meta: %s" % e)
+        except (tarfile.ReadError, EOFError, JSONDecodeError) as e:
+            raise InvalidArchiveError("corrupt archive: %s" % e)
 
 
 class ArchiveMetaSchema(Schema):

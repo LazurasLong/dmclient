@@ -9,9 +9,8 @@ import core.config
 import game.config
 from campaign import Campaign
 from campaign.controller import CampaignController
-from core import filters, generate_uuid
-from core.archive import PropertiesSchema, InvalidArchiveError, open_archive, \
-    ArchiveMeta, unpack_archive
+from core import filters, generate_uuid, archive
+from core.archive import PropertiesSchema, InvalidArchiveError, ArchiveMeta
 from game import GameSystem
 from model.qt import SchemaTableModel
 from oracle import DummyDelphi, Delphi
@@ -102,10 +101,10 @@ class LoadCampaignTask(QRunnable):
     def run(self):
         try:
             self.cb(5)
-            meta = open_archive(self.archive_path)
+            meta = archive.open(self.archive_path)
             self.cb(15)
             destination = CampaignController.extracted_archive_path(meta)
-            unpack_archive(meta, destination)
+            archive.unpack(meta, destination)
             self.cb(80)
             self.result = meta, destination
         except Exception as e:
@@ -170,7 +169,7 @@ class AppController(QObject):
         if not path:
             return
         try:
-            meta = open_archive(path)
+            meta = archive.open(path)
             self.games.add_gamesystem(meta)
             self.main_window.enable_create()
         except (OSError, InvalidArchiveError) as e:
