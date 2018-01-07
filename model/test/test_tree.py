@@ -243,14 +243,11 @@ class TestAttrNodeTreeModel:
         index = _walk_to(attr_model, 0)
         assert attr_model.data(index) == "eggs"
 
+    # TODO Test the contents of the list node?
+
     def test_list_attrnode(self, attr_model):
         index = _walk_to(attr_model, 1)
         assert attr_model.rowCount(index) == 0
-
-    def test_nested_attrnode(self, attr_model):
-        index = _walk_to(attr_model, 1, 0)
-        assert attr_model.data(
-                index) == "str", "the AttrNode children should be Nodes implicitly using __str__"
 
 
 class TestTableNodeTreeModel:
@@ -267,37 +264,3 @@ class TestTableNodeTreeModel:
     def test_displayrole(self, foomodel, child_i, expected):
         index = foomodel.index(child_i, 0, QModelIndex())
         assert expected == foomodel.data(index)
-
-
-
-class TestColumnDelegates:
-    def test_thing(self):
-        class FooCampaign:
-            regional_maps = ["r0", "r1", "r2"]
-            encounter_maps = ["e0", "e1", "e2", "e3"]
-            sessions = [1, 2, 3, 4, 5]
-
-        root = AttrNode(FooCampaign, "regional_maps", "encounter_maps",
-                        "sessions")
-
-        model = TreeModel(root)
-
-        assert model.rowCount(QModelIndex()) == 3
-        assert model.rowCount(_walk_to(model, 0)) == 2
-        assert model.rowCount(_walk_to(model, 1)) == 5
-
-        assert _walk_to(model, 0, 1).parent() == _walk_to(model, 0)
-
-        for attr_i, attr in enumerate(
-                [FooCampaign.regional_maps, FooCampaign.encounter_maps]):
-            parent_index = _walk_to(model, 0, attr_i)
-            for child_i, val in enumerate(attr):
-                index = _walk_to(model, 0, attr_i, child_i)
-                assert model.data(index) == val
-                assert index.parent() == parent_index
-
-        parent_index = _walk_to(model, 1)  # sessions
-        for child_i, val in enumerate(FooCampaign.sessions):
-            index = _walk_to(model, 1, child_i)
-            assert model.data(index) == str(val)
-            assert index.parent() == parent_index
