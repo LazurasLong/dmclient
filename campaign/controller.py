@@ -431,7 +431,7 @@ class CampaignController(QObject):
     @pyqtSlot()
     def on_campaign_properties(self):
         dlg = CampaignPropertiesDialog(self.campaign, self.view)
-        dlg.accepted.connect(self.on_properties_update(dlg))
+        dlg.accepted.connect(lambda: self.on_properties_update(dlg))
         dlg.show()
 
     @pyqtSlot()
