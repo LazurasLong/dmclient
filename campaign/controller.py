@@ -396,6 +396,8 @@ class CampaignController(QObject):
     def asset_tree_context_menu_requested(self, point):
         index = self.view.assetTree.indexAt(point)
         node = index.internalPointer()
+        if node is None:
+            return
         controller = node.delegate
         if not controller:
             log.debug("There is no controller on this node.")
