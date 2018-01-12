@@ -25,7 +25,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from campaign import Player
-from campaign.note import ExternalNote, Note, InternalNote
+from campaign.note import Note, InternalNote
 from core import filters, archive
 from core.config import TMP_PATH
 from model import GameBase
@@ -216,11 +216,11 @@ class NoteController(QObject):
         try:
             with open(path):
                 pass
-            base_note = Note(name=os.path.basename(path),
-                             author="")
-            note = ExternalNote(note_id=base_note.id, url=path)
+            # TODO: do this elsewhere.
+            if not path.startswith("file://"):
+                path = "file://" + path
+            note = Note(name=os.path.basename(path), author="", url=path)
             db = self._cc.db()
-            db.add(base_note)
             db.add(note)
             db.commit()
             self.tree_node.update()
