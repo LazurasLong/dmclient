@@ -159,11 +159,15 @@ class OracleController:
 
     def index_note(self, note):
         self.notemap[note.id] = None  # FIXME ugh
-        indexer = Indexer()
-        provider = self.providers[note.type]
-        f = self.executor.submit(indexer.index_note, provider, note)
-        f.add_done_callback(self.index_complete)
-        self.pending.append(f)
+        try:
+            provider = self.providers[note.type]
+        except KeyError:
+            log.warning("warning: no provider for note `%s'", note.type)
+        else:
+            indexer = Indexer()
+            f = self.executor.submit(indexer.index_note, provider, note)
+            f.add_done_callback(self.index_complete)
+            self.pending.append(f)
 
     def index_complete(self, f):
         try:
