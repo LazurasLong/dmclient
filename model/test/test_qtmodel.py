@@ -28,7 +28,6 @@ import core.hacks
 from model.qt import AbstractQtModel, ListModel, ReadOnlyListModel, \
     SchemaTableModel
 from model.schema import Schema
-from model.tree import AttrNode, TreeNode, TreeModel
 
 core.hacks.show_recursive_relationships = True
 core.hacks.install_qt_reprs()
