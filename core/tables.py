@@ -1,5 +1,5 @@
 # core/tables.py
-# Copyright (C) 2017 Alex Mair. All rights reserved.
+# Copyright (C) 2018 Alex Mair. All rights reserved.
 # This file is part of dmclient.
 #
 # dmclient is free software: you can redistribute it and/or modify

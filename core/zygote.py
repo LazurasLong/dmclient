@@ -1,3 +1,20 @@
+# core/zygote.py
+# Copyright (C) 2018 Alex Mair. All rights reserved.
+# This file is part of dmclient.
+#
+# dmclient is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, version 2 of the License.
+#
+# dmclient is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with dmclient.  If not, see <http://www.gnu.org/licenses/>.
+#
+
 """
 A *zygote* is a captured state of a process that is suitable for forking
 multiple times as a "cloned child" of the zygote, called an *egg* or *spawned

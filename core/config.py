@@ -1,5 +1,5 @@
 # core/config.py
-# Copyright (C) 2017 Alex Mair. All rights reserved.
+# Copyright (C) 2018 Alex Mair. All rights reserved.
 # This file is part of dmclient.
 #
 # dmclient is free software: you can redistribute it and/or modify
@@ -108,7 +108,7 @@ Click Agree to continue, or click Disagree to cancel the inclusion of this {0} a
 HAS_EXTERNAL_UPDATER = False
 
 
-copyright = "Copyright (C) 2017 Alex Mair. All rights reserved."
+copyright = "Copyright (C) 2018 Alex Mair. All rights reserved."
 
 
 class AppConfig:
