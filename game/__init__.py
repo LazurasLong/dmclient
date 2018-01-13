@@ -14,6 +14,7 @@ class GameSystem:
     def __init__(self, id, name, **kwargs):
         self.id = id
         self.name = name
+        self.dice = []
         self.modules = []
 
     def __hash__(self):

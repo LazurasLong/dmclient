@@ -42,7 +42,7 @@ class DiceRollerDialog(QDialog, Ui_ResultsDialog):
     def __init__(self, dice_controller):
         super().__init__()
         self.setupUi(self)
-
+        self.setWindowTitle("Dice Roller")
         help_dialog = self.help_dialog = QDialog(self)
         help_dialog.setWindowTitle("Dice Roller Help")
         bb = QDialogButtonBox(QDialogButtonBox.Ok, help_dialog)

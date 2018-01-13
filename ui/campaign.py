@@ -63,6 +63,7 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
         self._init_session_list(campaign)
         self._init_map_components()
         self._init_search_widgets()
+        self._init_tools(campaign)
 
         # FIXME this seems to do a subprocess thing. We don't want their stderr!
         self.digitalbusking.triggered.connect(lambda: webbrowser.open(DONATE_URL))
@@ -154,17 +155,11 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
     def on_edit_preferences_triggered(self):
         show_preferences(parent=self)
 
-    #
-    # Tools menu
-    #
-
     @pyqtSlot()
-    def on_roller_triggered(self):
-        standard_array = [20, 12, 10, 8, 6, 4, 100]
-        controller = DiceController(standard_array)
-        roller = DiceRollerDialog(controller)
-        roller.show()
-        roller.raise_()
+    def _init_tools(self, campaign):
+        controller = DiceController(campaign.dice)
+        self.dice_roller = DiceRollerDialog(controller)
+        self.roller.triggered.connect(self.dice_roller.show)
 
     @pyqtSlot(Campaign)
     def on_properties_change(self, campaign):

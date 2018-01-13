@@ -40,6 +40,7 @@ class Campaign:
         self.name = "Untitled campaign"
         self.author = "Unknown"
         self.description = ""
+        self.dice = game_system.dice
         self.creation_date = datetime.now()
         self.revision_date = datetime.now()
         self.players = {}
