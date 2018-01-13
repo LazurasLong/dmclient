@@ -116,9 +116,9 @@ class LoadCampaignTask(QRunnable):
 
 def shutdown_method(f):
     """
-    A decorator that offers a safety harness: if the function ``f`` throws,
-    the exception is caught and logged but further operations in the pipeline
-    are not stopped as a result.
+    A decorator that offers a safety harness: if the function ``f`` throws
+    ``OSError``, the exception is caught and logged but further operations in
+    the pipeline are not stopped as a result.
 
     Note: I tried making this a part of ``AppController`` because it's the only
     place where this is currently used. It works, but PyCharm gets very upset.
