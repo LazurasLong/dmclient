@@ -149,7 +149,8 @@ class Delphi:
     def shutdown(self):
         log.debug("shutdown triggered")
         self.keep_going = False
-        self.listen_thread.join()
+        if self.listen_thread:
+            self.listen_thread.join()
 
     def listen_loop(self):
         log.debug("delphi thread started")
