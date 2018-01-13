@@ -235,6 +235,8 @@ class TabController(QObject):
 
 
 class NewCampaignDialog(QDialog, Ui_NewCampaignDialog):
+    loadExistingCampaignRequested = pyqtSignal()
+
     def __init__(self, game_systems, options):
         QDialog.__init__(self)
         self.setupUi(self)
@@ -242,6 +244,9 @@ class NewCampaignDialog(QDialog, Ui_NewCampaignDialog):
         button.setText("Create campaign!")
         button.setIcon(QIcon(":/icons/logo.png"))
         button.setEnabled(0 < len(game_systems))
+        button = self.bb.button(QDialogButtonBox.Reset)
+        button.setText("Open existing campaign")
+        button.clicked.connect(self.loadExistingCampaignRequested)
         self.game_systems.setSelectionMode(QAbstractItemView.SingleSelection)
         self.game_systems.setModel(game_systems)
         self.game_systems.setModelColumn(1)

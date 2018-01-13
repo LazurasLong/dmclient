@@ -11,6 +11,7 @@ from campaign import Campaign
 from campaign.controller import CampaignController
 from core import filters, generate_uuid, archive
 from core.archive import PropertiesSchema, InvalidArchiveError, ArchiveMeta
+from core.async import mtexec
 from game import GameSystem
 from model.qt import SchemaTableModel
 from oracle import DummyDelphi, Delphi
@@ -158,6 +159,7 @@ class AppController(QObject):
     def show_new_campaign(self):
         w = self.main_window = NewCampaignDialog(self.games.systems, {})
         w.accepted.connect(self.on_new_campaign)
+        w.loadExistingCampaignRequested.connect(self.on_open_campaign)
         w.newGameSystemRequested.triggered.connect(self.on_add_gamesystem)
         w.show()
         w.raise_()
@@ -181,7 +183,11 @@ class AppController(QObject):
                           "Cannot add duplicate game system with id `{}'".format(
                               e.game_system_id))
 
+    @pyqtSlot()
     def on_new_campaign(self):
+        """
+        Called by the ``File`` menu or when the new campaign dialog is accepted.
+        """
         options = self.main_window.options
         self._clear_main_window()
 
@@ -195,6 +201,21 @@ class AppController(QObject):
         os.mkdir(CampaignController.working_directory(campaign))
         os.mkdir(CampaignController.extracted_archive_path(campaign))
         self._init_cc(campaign)
+
+    @pyqtSlot()
+    def on_open_campaign(self):
+        """
+        Called by the ``File`` menu and by the new campaign dialog's
+        *open existing* button.
+        """
+        path = get_open_filename(self.main_window, "Open campaign",
+                                 filter_=filters.campaign)
+        if not path:
+            return
+        if self.cc:
+            self.cc.shutdown()
+        self._clear_main_window()
+        self.load_campaign(path)
 
     def load_campaign(self, path):
         assert self.main_window is None
@@ -247,14 +268,18 @@ class AppController(QObject):
         # TODO: Ensure that the previous campaign was flushed out (i.e., tmp)
         cc = self.cc = CampaignController(delphi, campaign, archive_meta)
         window = cc.view
-        window.show()
-        window.raise_()
+
         window.check_for_updates.triggered.connect(self.on_check_updates)
+        window.open_campaign.triggered.connect(self.on_open_campaign)
         window.quit.triggered.connect(self.qapp.quit)
+
         self.main_window = window
         delphi.start(CampaignController.database_path(campaign),
                      CampaignController.xapian_database_path(campaign),
                      cc.search_controller)
+
+        window.show()
+        window.raise_()
 
     def shutdown(self):
         """
