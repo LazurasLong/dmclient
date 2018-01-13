@@ -220,7 +220,7 @@ class AppController(QObject):
     def load_campaign(self, path):
         assert self.main_window is None
         self.main_window = LoadingDialog(loading_text="Loading campaign...")
-        task = LoadCampaignTask(path, self.main_window.update_progress,
+        task = LoadCampaignTask(path, mtexec(self.main_window.update_progress),
                                 self._on_campaign_loaded)
         self.main_window.set_task(task)
         self.main_window.raise_()
