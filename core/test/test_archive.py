@@ -5,7 +5,8 @@ import pytest
 from dateutil.parser import parse as dtparse
 
 from core import archive
-from core.archive import InvalidArchiveError, InvalidArchiveMetadataError
+from core.archive import InvalidArchiveError, InvalidArchiveMetadataError, \
+    ArchiveMetaSchema
 
 
 @pytest.fixture(scope="module")
@@ -14,15 +15,16 @@ def archive_meta():
 
 
 def test_loading_metadata(archive_meta):
-    assert archive_meta.game_system_id == "PROTEGE"
-    assert archive_meta.name == "PROTéGé Test Campaign"
-    assert archive_meta.description == "This is a test campaign for " \
-                                       "PROTéGé, whose main purpose is " \
-                                       "to ensure that dmclient has decent " \
-                                       "unit tests."
-    assert archive_meta.author == "Alex Mair"
-    assert archive_meta.creation_date == dtparse("2016-04-20")
-    assert archive_meta.revision_date == dtparse("2016-04-21")
+    assert "PROTEGE" == archive_meta.game_system_id
+    assert "PROTéGé Test Campaign" == archive_meta.name
+    assert "Alex Mair" == archive_meta.author
+    assert dtparse("2016-04-20") == archive_meta.creation_date
+    assert dtparse("2016-04-21") == archive_meta.revision_date
+    assert "978-3-16-148410-0" == archive_meta.isbn
+    assert "This is a test campaign for " \
+           "PROTéGé, whose main purpose is " \
+           "to ensure that dmclient has decent " \
+           "unit tests." == archive_meta.description
 
 
 class TestInvalid:
@@ -60,3 +62,14 @@ def test_export(archive_meta, tmpdir):
         assert "properties.json" in members
         assert "bar" in members and tf.getmember("bar").isdir()
         assert "bar/bar.txt" in members
+
+        with open("resources/test/protege/testcampaign/properties.json") as f:
+            schema = ArchiveMetaSchema()
+            m1, errors = schema.loads(f.read())
+            assert not errors
+            m2, errors = schema.loads(
+                tf.extractfile("properties.json").read().decode())
+            assert not errors
+            # Hacky way of determining if equal and unmolested.
+            test_loading_metadata(m1)
+            test_loading_metadata(m2)

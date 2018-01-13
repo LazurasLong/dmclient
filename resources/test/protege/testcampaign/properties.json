@@ -5,5 +5,6 @@
 	"game_system_id": "PROTEGE",
 	"creation_date": "2016-04-20",
 	"revision_date": "2016-04-21",
-	"description": "This is a test campaign for PROTéGé, whose main purpose is to ensure that dmclient has decent unit tests."
+	"description": "This is a test campaign for PROTéGé, whose main purpose is to ensure that dmclient has decent unit tests.",
+	"isbn": "978-3-16-148410-0"
 }

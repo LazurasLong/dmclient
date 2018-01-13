@@ -109,6 +109,9 @@ class ArchiveMeta:
         self.isbn = isbn
         self.last_seen_path = last_seen_path
 
+    def __eq__(self, other):
+       return self.id == other.id
+
     @classmethod
     def load(cls, path):
         """
