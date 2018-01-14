@@ -325,6 +325,7 @@ class AppController(QObject):
         if self.cc:
             shutil.rmtree(self.cc.working_directory(self.cc.campaign))
 
+    @pyqtSlot()
     def on_check_updates(self):
         dlg = LoadingDialog(self.main_window,
                             loading_text="Checking for updates...")
