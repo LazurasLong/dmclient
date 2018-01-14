@@ -196,7 +196,9 @@ def main(app_args, oracle_args):
 
     try:
         controller.exec()
-    finally:
+    except KeyboardInterrupt:
+        delphi_conn.send("SIGTERM")  # FIXME
+    except Exception:
         delphi_conn.send("hurk dead")
 
     sys.exit(0)

@@ -99,8 +99,15 @@ class Delphi:
 
     listen_timeout = 1
 
-    def __init__(self, zygote):
+    def __init__(self, zygote, quit):
+        """
+
+        :param zygote:  The zygote to spawn the oracle from.
+        :param quit:  A function which is called with an exit code to indicate
+        that the oracle process has terminated with such exit code.
+        """
         self.zygote = zygote
+        self.quit = quit  # This is kind of stupid.
         self.oracle_pid = None
         self.responder = None
         self.documents = []
@@ -159,7 +166,12 @@ class Delphi:
         while self.keep_going:
             if delphi_connection.poll(timeout):
                 obj = delphi_connection.recv()
-                log.debug("received `%s' from oracle", obj)
+                # FIXME: This is garbage.
+                if obj == "SIGTERM":
+                    self.quit(0)
+                elif obj == "hurk dead":
+                    log.warning("the oracle appears to have imbibed too much")
+                log.warning("received `%s' from oracle", obj)
 
     def _send_message(self, message, *args):
         self.delphi_connection.send(message % args)

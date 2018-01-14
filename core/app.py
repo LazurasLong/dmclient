@@ -281,7 +281,7 @@ class AppController(QObject):
         if self.args.disable_oracle:
             delphi = DummyDelphi()
         else:
-            delphi = Delphi(self.oracle_zygote)
+            delphi = Delphi(self.oracle_zygote, self.delphi_quit)
 
         # TODO: Ensure that the previous campaign was flushed out (i.e., tmp)
         cc = self.cc = CampaignController(delphi, campaign, archive_meta)
@@ -331,3 +331,8 @@ class AppController(QObject):
                             loading_text="Checking for updates...")
         dlg.raise_()
         dlg.show()
+
+    def delphi_quit(self, code):
+        if code == 0:
+            # SIGTERM, it's time to go.
+            self.qapp.quit()
