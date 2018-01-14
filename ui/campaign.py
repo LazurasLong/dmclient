@@ -23,7 +23,7 @@ from logging import getLogger
 
 from PyQt5.QtCore import Qt, pyqtSlot
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QCloseEvent
 from PyQt5.QtWidgets import *
 
 from campaign import Campaign, CampaignSession
@@ -48,6 +48,7 @@ log = getLogger(__name__)
 
 
 class CampaignWindow(QMainWindow, Ui_MainWindow):
+    closeRequested = pyqtSignal(QCloseEvent)
     windowMoved = pyqtSignal()
     windowResized = pyqtSignal()
 
@@ -132,6 +133,9 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
         # dock = MapLayerPropertiesDock(self.map_scene.layers, self)
         # dock.layer_table.doubleClicked.connect(self._map_layers_dlg.on_showedit)
         self.addDockWidget(Qt.RightDockWidgetArea, dock)
+
+    def closeEvent(self, event):
+        self.closeRequested.emit(event)
 
     @pyqtSlot()
     def on_import_rules_triggered(self):
@@ -245,7 +249,8 @@ class NewCampaignDialog(QDialog, Ui_NewCampaignDialog):
         self.game_systems.setSelectionMode(QAbstractItemView.SingleSelection)
         self.game_systems.setModel(game_systems)
         self.game_systems.setModelColumn(1)
-        self.game_systems.addAction(self.newGameSystemRequested)
+        self.game_systems.addAction(self.importGameSystem)
+        self.game_systems.addAction(self.newGameSystem)
         self.game_systems.setCurrentIndex(game_systems.index(0, 1))
         self._options = options
 

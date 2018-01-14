@@ -11,9 +11,13 @@ class Module:
 
 
 class GameSystem:
-    def __init__(self, id, name, **kwargs):
+    def __init__(self, id, name, author, description, creation_date, revision_date):
         self.id = id
         self.name = name
+        self.author = author
+        self.description = description
+        self.creation_date = creation_date
+        self.revision_date = revision_date
         self.dice = []
         self.modules = []
 

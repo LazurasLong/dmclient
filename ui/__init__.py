@@ -85,6 +85,17 @@ def get_save_filename(parent, title, filter_=filters.any, dir_=None,
 
 def get_polar_response(parent, msg, affirmative, title="Question",
                        dissenting="Cancel"):
+    """
+    Ask the user a question and return their response as ``True`` for "yes" and
+    ``False`` for "no".
+
+    :param parent: Parent window or dialog.
+    :param msg: The message to display.
+    :param affirmative: The text to show on the "Yes" button. Must be specified.
+    :param title: The message box title.
+    :param dissenting: The text to show on the "No" button; "Cancel" by default.
+    :return: ``True`` if the user selected the affirmative, ``False`` otherwise.
+    """
     assert affirmative != "", "Affirmative text must always be explicitly specified!"
     msgbox = QMessageBox(parent)
     msgbox.setWindowTitle(title)

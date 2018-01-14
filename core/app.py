@@ -29,11 +29,14 @@ from campaign.controller import CampaignController
 from core import filters, generate_uuid, archive
 from core.archive import PropertiesSchema, InvalidArchiveError, ArchiveMeta
 from core.async import mtexec
+from core.controller import QtController
 from game import GameSystem
 from model.qt import SchemaTableModel
 from oracle import DummyDelphi, Delphi
-from ui import display_error, get_open_filename, LoadingDialog
+from ui import display_error, get_open_filename, LoadingDialog, \
+    get_polar_response
 from ui.campaign import NewCampaignDialog
+from ui.game.system import SystemPropertiesEditor, SystemIDValidator
 
 log = getLogger(__name__)
 
@@ -44,13 +47,15 @@ class ExistingLibraryError(Exception):
         self.game_system_id = game_system_id
 
 
-class GameSystemManager:
-    def __init__(self):
+class GameSystemController(QtController):
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.systems = SchemaTableModel(PropertiesSchema, GameSystem,
                                         readonly=True)
+        self.cc = None
         self._last_path = {}
 
-    def add_gamesystem(self, archive_meta):
+    def add_from_archive(self, archive_meta):
         """
         Register a game system on the filesystem.
 
@@ -62,9 +67,17 @@ class GameSystemManager:
         game_system_id = archive_meta.game_system_id
         if game_system_id in [game_system.id for game_system in self.systems]:
             raise ExistingLibraryError(path, game_system_id)
-        game_system = GameSystem(game_system_id, archive_meta.name)
-        self.systems.append(game_system)
+        game_system = GameSystem(game_system_id,
+                                 archive_meta.name,
+                                 archive_meta.author,
+                                 archive_meta.description,
+                                 archive_meta.creation_date,
+                                 archive_meta.revision_date)
+        self.add(game_system)
         self._last_path[game_system.id] = path
+
+    def add(self, game_system):
+        self.systems.append(game_system)
 
     def load_config(self, config_path):
         game_systems = []
@@ -74,7 +87,7 @@ class GameSystemManager:
             for id_, path in reader:
                 try:
                     meta = ArchiveMeta.load(path)
-                    self.add_gamesystem(meta)
+                    self.add_from_archive(meta)
                 # bleh
                 except (OSError, InvalidArchiveError,
                         ExistingLibraryError) as e:
@@ -87,8 +100,13 @@ class GameSystemManager:
         with open(config_path, 'w') as config_file:
             writer = game.config.writer(config_file)
             for system in self.systems:
-                path = self._last_path[system.id]
-                writer.write_system(system, path)
+                try:
+                    path = self._last_path[system.id]
+                except KeyError:
+                    # That's ok, just means we haven't yet saved this. Skip.
+                    pass
+                else:
+                    writer.write_system(system, path)
 
     def get(self, id_):
         """
@@ -100,6 +118,48 @@ class GameSystemManager:
             if system.id == id_:
                 return system
         raise KeyError
+
+    def has_unsaved(self):
+        return True
+
+    @pyqtSlot()
+    def on_game_system_properties(self):
+        if self.cc:
+            game_system = self.cc.campaign.game_system
+        else:
+            game_system = GameSystem("GAME", "", " ", " ", datetime.now(), datetime.now())
+        validator = SystemIDValidator(self.systems)
+        dlg = SystemPropertiesEditor(game_system,
+                                     validator)
+        dlg.accepted.connect(lambda: self.on_game_system_update(dlg))
+        dlg.show()
+
+    @pyqtSlot()
+    def on_game_system_update(self, propdlg):
+        game_system = propdlg.game_system
+        self.systems.add(game_system)
+
+    @pyqtSlot()
+    def on_add_gamesystem(self):
+        path = get_open_filename(self.main_window, "Import game archive",
+                                 filter_=filters.library,
+                                 recent_key="import_game_archive")
+        if not path:
+            return
+        try:
+            meta = archive.open(path)
+            self.game_controller.add_from_archive(meta)
+            self.main_window.enable_create()
+        except (OSError, InvalidArchiveError) as e:
+            log.error("failed to load game system: %s", e)
+            display_error(self.main_window,
+                          "The archive file could not be read.")
+        except ExistingLibraryError as e:
+            display_error(self.main_window,
+                          "Cannot add duplicate game system with id `{}'".format(
+                              e.game_system_id))
+
+
 
 
 class LoadCampaignTask(QRunnable):
@@ -166,39 +226,22 @@ class AppController(QObject):
         self.oracle_zygote = oracle_zygote
         self.cc = None
         self.thread_pool = QThreadPool()
-        self.games = GameSystemManager()
+        self.game_controller = GameSystemController()
         self.main_window = None
         try:
-            self.games.load_config(self.game_config_path)
+            self.game_controller.load_config(self.game_config_path)
         except FileNotFoundError:
             pass
 
     def show_new_campaign(self):
-        w = self.main_window = NewCampaignDialog(self.games.systems, {})
+        g = self.game_controller
+        w = self.main_window = NewCampaignDialog(g.systems, {})
         w.accepted.connect(self.on_new_campaign)
         w.loadExistingCampaignRequested.connect(self.on_open_campaign)
-        w.newGameSystemRequested.triggered.connect(self.on_add_gamesystem)
+        w.importGameSystem.triggered.connect(g.on_add_gamesystem)
+        w.newGameSystem.triggered.connect(g.on_game_system_properties)
         w.show()
         w.raise_()
-
-    def on_add_gamesystem(self):
-        path = get_open_filename(self.main_window, "Import game archive",
-                                 filter_=filters.library,
-                                 recent_key="import_game_archive")
-        if not path:
-            return
-        try:
-            meta = archive.open(path)
-            self.games.add_gamesystem(meta)
-            self.main_window.enable_create()
-        except (OSError, InvalidArchiveError) as e:
-            log.error("failed to load game system: %s", e)
-            display_error(self.main_window,
-                          "The archive file could not be read.")
-        except ExistingLibraryError as e:
-            display_error(self.main_window,
-                          "Cannot add duplicate game system with id `{}'".format(
-                              e.game_system_id))
 
     @pyqtSlot()
     def on_new_campaign(self):
@@ -209,7 +252,7 @@ class AppController(QObject):
         self._clear_main_window()
 
         cid = generate_uuid()
-        game_system = self.games.get(options["game_system"])
+        game_system = self.game_controller.get(options["game_system"])
         campaign = Campaign(cid, game_system)
         for attr in ["name", "author"]:
             option = options[attr]
@@ -268,7 +311,7 @@ class AppController(QObject):
         self.main_window = None
 
     def _create_campaign(self, meta):
-        game_system = self.games.get(meta.game_system_id)
+        game_system = self.game_controller.get(meta.game_system_id)
         campaign = Campaign(meta.id, game_system)
         campaign.name = meta.name
         campaign.author = meta.author
@@ -285,19 +328,41 @@ class AppController(QObject):
 
         # TODO: Ensure that the previous campaign was flushed out (i.e., tmp)
         cc = self.cc = CampaignController(delphi, campaign, archive_meta)
-        window = cc.view
 
+        self.game_controller.cc = cc
+
+        window = self.main_window = cc.view
         window.check_for_updates.triggered.connect(self.on_check_updates)
+        window.game_system_properties.triggered.connect(self.game_controller.on_game_system_properties)
         window.open_campaign.triggered.connect(self.on_open_campaign)
-        window.quit.triggered.connect(self.qapp.quit)
+        window.quit.triggered.connect(self.on_quit_requested)
+        window.closeRequested.connect(self.on_quit_requested_event)
 
-        self.main_window = window
         delphi.start(CampaignController.database_path(campaign),
                      CampaignController.xapian_database_path(campaign),
                      cc.search_controller)
 
         window.show()
         window.raise_()
+
+    def on_quit_requested(self):
+        if self.game_controller.has_unsaved():
+            res = get_polar_response(self.main_window,
+                                     "There are unsaved game system changes.\n"
+                                     "\n"
+                                     "Do you want to save these changes to disc?",
+                                     "Save...", "Unsaved game systems")
+            if not res:
+                return False
+            print("here is where I would export unused archives")
+        self.qapp.quit()
+        return True
+
+    def on_quit_requested_event(self, event):
+        if not self.on_quit_requested():
+            event.ignore()
+            return
+        event.accept()
 
     def shutdown(self):
         """
@@ -318,7 +383,7 @@ class AppController(QObject):
 
     @shutdown_method
     def _flush_game_config(self):
-        self.games.save_config(self.game_config_path)
+        self.game_controller.save_config(self.game_config_path)
 
     @shutdown_method
     def _clear_campaign_temp_files(self):

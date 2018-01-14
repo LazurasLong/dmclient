@@ -162,9 +162,27 @@
     <addaction name="separator"/>
     <addaction name="edit_map_layers"/>
    </widget>
+   <widget class="QMenu" name="menuGame">
+    <property name="title">
+     <string>Game</string>
+    </property>
+    <widget class="QMenu" name="menuEdit_2">
+     <property name="title">
+      <string>Edit</string>
+     </property>
+     <addaction name="edit_rules"/>
+     <addaction name="edit_equipment"/>
+     <addaction name="edit_classes"/>
+     <addaction name="edit_spells"/>
+    </widget>
+    <addaction name="menuEdit_2"/>
+    <addaction name="separator"/>
+    <addaction name="game_system_properties"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
+   <addaction name="menuGame"/>
    <addaction name="menuCampaign"/>
    <addaction name="menuSession"/>
    <addaction name="menuMap"/>
@@ -569,6 +587,31 @@
   <action name="actionImport_from_image">
    <property name="text">
     <string>Import from image...</string>
+   </property>
+  </action>
+  <action name="game_system_properties">
+   <property name="text">
+    <string>System Properties</string>
+   </property>
+  </action>
+  <action name="edit_rules">
+   <property name="text">
+    <string>Rules</string>
+   </property>
+  </action>
+  <action name="edit_spells">
+   <property name="text">
+    <string>Spells</string>
+   </property>
+  </action>
+  <action name="edit_classes">
+   <property name="text">
+    <string>Classes</string>
+   </property>
+  </action>
+  <action name="edit_equipment">
+   <property name="text">
+    <string>Equipment</string>
    </property>
   </action>
  </widget>

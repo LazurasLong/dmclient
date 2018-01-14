@@ -41,6 +41,13 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout">
          <item>
+          <widget class="QPushButton" name="create_game_system">
+           <property name="text">
+            <string>Create</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <spacer name="horizontalSpacer">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
@@ -87,9 +94,14 @@
     </widget>
    </item>
   </layout>
-  <action name="newGameSystemRequested">
+  <action name="importGameSystem">
    <property name="text">
     <string>Import library...</string>
+   </property>
+  </action>
+  <action name="newGameSystem">
+   <property name="text">
+    <string>Create new</string>
    </property>
   </action>
  </widget>
@@ -136,12 +148,28 @@
   <connection>
    <sender>browse_for_game_systems</sender>
    <signal>clicked()</signal>
-   <receiver>newGameSystemRequested</receiver>
+   <receiver>importGameSystem</receiver>
    <slot>trigger()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>198</x>
      <y>175</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>create_game_system</sender>
+   <signal>clicked()</signal>
+   <receiver>newGameSystem</receiver>
+   <slot>trigger()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>237</x>
+     <y>192</y>
     </hint>
     <hint type="destinationlabel">
      <x>-1</x>

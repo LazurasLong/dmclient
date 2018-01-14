@@ -18,7 +18,7 @@
 import os
 from logging import getLogger
 
-from PyQt5.QtCore import QObject, QTimer, pyqtSlot, QPoint
+from PyQt5.QtCore import QTimer, pyqtSlot, QPoint
 from PyQt5.QtGui import QIcon, QStandardItem
 from PyQt5.QtWidgets import QMenu
 from sqlalchemy import create_engine
@@ -29,6 +29,7 @@ from campaign.note import Note, InternalNote
 from core import filters, archive
 from core.archive import ArchiveMeta
 from core.config import TMP_PATH
+from core.controller import QtController
 from model import GameBase
 from model.tree import FixedNode, TableNode, TreeModel, BadNode
 from ui import get_open_filename, display_error, get_save_filename, \
@@ -42,7 +43,7 @@ from ui.search import SearchCompleter
 log = getLogger(__name__)
 
 
-class SearchController(QObject):
+class SearchController(QtController):
     """
     .. todo::
         Make this class more MVC-ish. It does too much. It'd be nice if it also
@@ -141,12 +142,11 @@ class SearchController(QObject):
             model.appendRow(section_item)
 
 
-class NoteController(QObject):
-    def __init__(self, cc):
+class NoteController(QtController):
+    def __init__(self, cc, parent=None):
         self._cc = cc
         view = cc.view
-        super().__init__(view)
-        self.view = view  # ?!
+        super().__init__(parent, view)
         self.tree_node = TableNode(cc.db(), Note,
                                    icon=QIcon(":/icons/books.png"),
                                    text="Documents", delegate=self,
@@ -169,11 +169,10 @@ class NoteController(QObject):
 
     def context_menu(self):
         window = self.view
-        return [window.import_document, window.add_document,
-                window.remove_document]
+        return [window.import_document, window.add_document]
 
     def item_context_menu(self):
-        raise NotImplementedError
+        return [self.view.remove_document]
 
     @pyqtSlot()
     def on_new_document(self):
@@ -233,10 +232,10 @@ class NoteController(QObject):
         raise NotImplementedError
 
 
-class MapController(QObject):
-    def __init__(self, cc):
+class MapController(QtController):
+    def __init__(self, cc, parent=None):
         view = cc.view
-        super().__init__(view)
+        super().__init__(parent, view)
         self.campaign_window = view
         self.tree_node = FixedNode(icon=QIcon(":/icons/maps.png"), text="Maps",
                                    action=self.show_map)
@@ -256,18 +255,18 @@ class MapController(QObject):
         return RegionalMapView(map, ControlScheme(), self.campaign_window)
 
 
-class PlayerController(QObject):
-    def __init__(self, cc):
+class PlayerController(QtController):
+    def __init__(self, cc, parent=None):
         view = cc.view
-        super().__init__(view)
+        super().__init__(parent, view)
         self.tree_node = TableNode(cc.db(), Player, text="Players",
                                    icon=QIcon(":/icons/party.png"))
 
 
-class SessionController(QObject):
-    def __init__(self, cc):
+class SessionController(QtController):
+    def __init__(self, cc, parent=None):
         view = cc.view
-        super().__init__(view)
+        super().__init__(parent, view)
         icon = QIcon(":/icons/sessions.png")
         self.tree_node = BadNode(text="Campaign sessions")
         # self.tree_node = TableNode(CampaignSession,
@@ -277,7 +276,7 @@ class SessionController(QObject):
         pass
 
 
-class CampaignController(QObject):
+class CampaignController(QtController):
     """
     A ``CampaignController`` is the controller for a campaign during the
     lifetime of an application. To keep this class small, it is mostly
@@ -309,7 +308,7 @@ class CampaignController(QObject):
         self.search_controller = None
         self._init_subcontrollers()
 
-        asset_tree = self.build_asset_tree(self.campaign)
+        asset_tree = self.build_asset_tree()
         self.asset_tree_model = TreeModel(asset_tree)
 
         self._init_view()
@@ -378,7 +377,7 @@ class CampaignController(QObject):
 
         v.campaign_properties.triggered.connect(self.on_campaign_properties)
 
-    def build_asset_tree(self, campaign):
+    def build_asset_tree(self):
         root = FixedNode(*[controller.tree_node for controller in
                            [self.map_controller, self.session_controller,
                             self.player_controller, self.note_controller]])
@@ -442,6 +441,7 @@ class CampaignController(QObject):
         options = propdlg.options
         for k, v in options.items():
             setattr(self.campaign, k, v)
+
         self.view.setWindowTitle(self.campaign.name)
         self.properties_dialog = None
 
