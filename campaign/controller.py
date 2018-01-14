@@ -371,6 +371,8 @@ class CampaignController(QObject):
         v.searchEdit.returnPressed.connect(sc.on_search_requested)
 
         v.assetTree.setModel(self.asset_tree_model)
+        v.assetTree.clicked.connect(lambda idx: log.debug("idx = %s, %s", idx,
+                                                          self.asset_tree_model.rowCount(idx)))
         v.assetTree.doubleClicked.connect(self.asset_tree_doubleclick)
         v.assetTree.customContextMenuRequested.connect(self.asset_tree_context_menu_requested)
 
