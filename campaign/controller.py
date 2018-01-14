@@ -27,6 +27,7 @@ from sqlalchemy.orm import sessionmaker
 from campaign import Player
 from campaign.note import Note, InternalNote
 from core import filters, archive
+from core.archive import ArchiveMeta
 from core.config import TMP_PATH
 from model import GameBase
 from model.tree import FixedNode, TableNode, TreeModel, BadNode
@@ -448,6 +449,15 @@ class CampaignController(QObject):
         if not path:
             return
         try:
+            campaign = self.campaign
+            self.archive_meta = ArchiveMeta(campaign.id,
+                                            campaign.game_system.id,
+                                            campaign.name,
+                                            campaign.description,
+                                            campaign.author,
+                                            campaign.creation_date,
+                                            campaign.revision_date,
+                                            last_seen_path=path)
             archive.export(self.archive_meta,
                            CampaignController.extracted_archive_path(self.campaign),
                            path)

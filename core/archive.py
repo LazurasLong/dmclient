@@ -146,7 +146,7 @@ class ArchiveMetaSchema(Schema):
     author = fields.Str(default="")
     creation_date = fields.DateTime(format="iso")
     revision_date = fields.DateTime(format="iso")
-    isbn = fields.Str(default="")
+    isbn = fields.Str(default="", required=False, missing="", allow_none=True)
 
     @post_load
     def make_meta(self, m):
