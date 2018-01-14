@@ -254,6 +254,7 @@ class AppController(QObject):
             log.exception("failed to load campaign: %s",
                           self.main_window.task.exception)
             display_error(self.main_window, "The campaign could not be loaded.")
+            self._clear_main_window()
             self.show_new_campaign()
             return
         meta, campaign_path = result
