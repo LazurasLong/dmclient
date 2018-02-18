@@ -77,6 +77,9 @@ class DummyDelphi:
         self.enabled = True
         self.documents = []
 
+    def start(self, _, __, ___):
+        pass
+
     def init_database(self, _, __):
         pass
 
