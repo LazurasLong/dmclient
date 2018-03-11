@@ -138,6 +138,27 @@ class DiceController(QObject):
         try:
             # Hack: tack on +0 to force evaluation
             # (Their API docs are complete garbage)
-            self.newResult.emit("{} = {}".format(text, roll(text + "+0")))
+            self.newResult.emit("{} = {}".format(text, roll(text)))
         except pyparsing.ParseException:  # Ugh, trash dice api.
             self.syntaxError.emit()
+
+
+class Names:
+    def __init__(self):
+        self.first = []
+        self.last = []
+
+
+class NameGenParser:
+    def __init__(self):
+        pass
+
+    def parse(self, f):
+        names = Names()
+        target = names.first
+        for line in [line.strip() for line in f]:
+            if line == "---":
+                target = names.last
+            else:
+                target.append(line)
+        return names
