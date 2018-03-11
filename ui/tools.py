@@ -23,7 +23,7 @@
 """
 
 from functools import partial  # using fun things.
-from random import randint
+from random import randint, choice
 
 import pyparsing  # Ugh, trash dice api.
 from dice import roll
@@ -147,6 +147,10 @@ class Names:
     def __init__(self):
         self.first = []
         self.last = []
+
+    def name(self):
+        """Returns a randomly generated full name."""
+        return "{} {}".format(choice(self.first), choice(self.last))
 
 
 class NameGenParser:
