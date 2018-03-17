@@ -47,7 +47,3 @@ class TestNameGen:
         assert "Tingle Schmidt" == names.female_name()
         assert "Jane Schmidt" == names.female_name()
         assert "Buffy Schmidt" == names.female_name()
-
-    def test_both_genders(self, names):
-        assert "Tingle Schmidt" == names.name()
-        assert "John Schmidt" == names.name()

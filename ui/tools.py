@@ -25,12 +25,16 @@
 from functools import partial  # using fun things.
 from random import randint, choice
 
+import os
 import pyparsing  # Ugh, trash dice api.
 from dice import roll
 from PyQt5.QtCore import *
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import *
 
+from core import filters
+from ui import get_open_filename
+from ui.widgets.namegen import Ui_NameGenControls
 from ui.widgets.results import Ui_ResultsDialog
 from ui.widgets.roller import Ui_RollerControls
 
@@ -153,10 +157,6 @@ class Names:
     def _name(self, target):
         return "{} {}".format(choice(target), choice(self.last))
 
-    def name(self):
-        # ugh a new list each time?!
-        return self._name(self.male + self.female)
-
     def male_name(self):
         return self._name(self.male)
 
@@ -179,3 +179,106 @@ class NameGenParser:
                 continue
             target.append(line)
         return names
+
+
+male = 0
+female = 1
+
+
+class NameGenController(QObject):
+    groupsChanged = pyqtSignal(list)
+    newResult = pyqtSignal(list)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.groups = []
+        self.current_group_nb = -1
+        self.current_gender = male
+        self.view = None
+
+    def set_view(self, view):
+        self.view = view
+
+        view.form.name_groups.activated.connect(self.on_cb_activated)
+        view.form.male_names.clicked.connect(lambda: self.set_current_gender(male))
+        view.form.female_names.clicked.connect(lambda: self.set_current_gender(female))
+        view.form.generate.clicked.connect(self.on_generate)
+
+        self.groupsChanged.connect(view.groups_changed)
+        self.groupsChanged.emit(self.groups)
+        self.newResult.connect(view.results_changed)
+
+    @property
+    def current_group(self):
+        # stupid
+        assert self.current_group_nb != -1
+        return self.groups[self.current_group_nb]
+
+    def set_current_gender(self, gender):
+        self.current_gender = gender
+
+    def set_group(self, group_nb):
+        self.current_group_nb = group_nb
+
+    @pyqtSlot(int)
+    def on_cb_activated(self, i):
+        name_groups = self.view.form.name_groups
+        if i + 1 == name_groups.count():
+            path = get_open_filename(self.view, "Import name generator",
+                                     filter_=filters.txt)
+            if not path:
+                name_groups.setCurrentIndex(0)
+                return
+            parser = NameGenParser()
+            with open(path) as f:
+                names = parser.parse(f)
+                # FIXME
+                names.set_name = os.path.splitext(os.path.basename(path))[0]
+                self.groups.append(names)
+                self.groupsChanged.emit(self.groups)
+                new_group_i = len(self.groups) - 1
+                self.current_group_nb = new_group_i
+                self.view.form.name_groups.setCurrentIndex(new_group_i)
+        elif i == name_groups.count():
+            # separator
+            pass
+        else:
+            self.set_group(i)
+
+    @pyqtSlot()
+    def on_generate(self):
+        if self.current_gender == male:
+            target = self.current_group.male_name
+        else:
+            target = self.current_group.female_name
+        results = list([target() for _ in range(10)])
+        self.newResult.emit(results)
+
+
+class NameGenDialog(QDialog, Ui_ResultsDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setupUi(self)
+        self.setWindowTitle("Name generator")
+        name_controls = QWidget(self)
+        self.bb.button(QDialogButtonBox.Help).clicked.connect(self.history.clear)
+        form = self.form = Ui_NameGenControls()
+        form.setupUi(name_controls)
+        self.layout.insertWidget(0, name_controls)
+
+    def groups_changed(self, groups):
+        name_groups = self.form.name_groups
+        name_groups.clear()
+        for group in groups:
+             name_groups.addItem(group.set_name)
+        enabled = 0 < len(groups)
+        self.form.male_names.setEnabled(enabled)
+        self.form.female_names.setEnabled(enabled)
+        self.form.generate.setEnabled(enabled)
+        name_groups.insertSeparator(name_groups.count())
+        name_groups.addItem("Import...")
+
+    def results_changed(self, results):
+        self.history.clear()
+        for result in results:
+            self.history.appendPlainText(result)

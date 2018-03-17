@@ -132,7 +132,7 @@
      <string>Tools</string>
     </property>
     <addaction name="roller"/>
-    <addaction name="actionNPC_Generator"/>
+    <addaction name="namegen"/>
     <addaction name="rewards"/>
    </widget>
    <widget class="QMenu" name="menuSession">
@@ -530,9 +530,9 @@
     <string>Manage layers...</string>
    </property>
   </action>
-  <action name="actionNPC_Generator">
+  <action name="namegen">
    <property name="text">
-    <string>NPC Generator</string>
+    <string>Name Generator</string>
    </property>
   </action>
   <action name="export_map_to_json">

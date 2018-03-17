@@ -38,7 +38,8 @@ from ui import display_error, get_open_filename, ResourceDialogManager, \
 from ui.about import show as show_about
 from ui.archive import ArchiveDialog
 from ui.preferences import show_preferences
-from ui.tools import DiceController as DiceController, DiceRollerDialog, QObject
+from ui.tools import DiceController as DiceController, DiceRollerDialog, \
+    QObject, NameGenController, NameGenDialog
 from ui.widgets.campaign.new import Ui_NewCampaignDialog
 from ui.widgets.campaign.properties import Ui_CampaignProperties
 from ui.widgets.campaign.session import Ui_CampaignSession
@@ -161,9 +162,16 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
 
     @pyqtSlot()
     def _init_tools(self, campaign):
+        # FIXME: decide on this crap already...
+
         controller = DiceController(campaign.dice)
         self.dice_roller = DiceRollerDialog(controller)
         self.roller.triggered.connect(self.dice_roller.show)
+
+        dialog = NameGenDialog()
+        con = self.namegenerator = NameGenController()
+        con.set_view(dialog)
+        self.namegen.triggered.connect(dialog.show)
 
     @pyqtSlot(Campaign)
     def on_properties_change(self, campaign):
