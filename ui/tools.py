@@ -145,12 +145,24 @@ class DiceController(QObject):
 
 class Names:
     def __init__(self):
-        self.first = []
+        self.set_name = ""
+        self.male = []
+        self.female = []
         self.last = []
 
+    def _name(self, target):
+        return "{} {}".format(choice(target), choice(self.last))
+
     def name(self):
+        # ugh a new list each time?!
+        return self._name(self.male + self.female)
+
+    def male_name(self):
+        return self._name(self.male)
+
+    def female_name(self):
         """Returns a randomly generated full name."""
-        return "{} {}".format(choice(self.first), choice(self.last))
+        return self._name(self.female)
 
 
 class NameGenParser:
@@ -159,10 +171,11 @@ class NameGenParser:
 
     def parse(self, f):
         names = Names()
-        target = names.first
+        targets = iter([names.male, names.female, names.last])
+        target = next(targets)
         for line in [line.strip() for line in f]:
             if line == "---":
-                target = names.last
-            else:
-                target.append(line)
+                target = next(targets)
+                continue
+            target.append(line)
         return names
