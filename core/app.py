@@ -332,7 +332,8 @@ class AppController(QObject):
 
         window = self.main_window = cc.view
         window.check_for_updates.triggered.connect(self.on_check_updates)
-        window.game_system_properties.triggered.connect(self.game_controller.on_game_system_properties)
+        window.game_system_properties.triggered.connect(
+            self.game_controller.on_game_system_properties)
         window.open_campaign.triggered.connect(self.on_open_campaign)
         window.quit.triggered.connect(self.on_quit_requested)
         window.closeRequested.connect(self.on_quit_requested_event)
