@@ -1,3 +1,6 @@
+from datetime import datetime
+
+
 def feature(name):
     pass
 
@@ -23,3 +26,7 @@ class GameSystem:
 
     def __hash__(self):
         return hash(self.id)
+
+    @classmethod
+    def default(cls):
+        return GameSystem("GAME", "", " ", " ", datetime.now(), datetime.now())

@@ -127,7 +127,8 @@ class GameSystemController(QtController):
         if self.cc:
             game_system = self.cc.campaign.game_system
         else:
-            game_system = GameSystem("GAME", "", " ", " ", datetime.now(), datetime.now())
+            # FIXME
+            game_system = GameSystem.default()
         validator = SystemIDValidator(self.systems)
         dlg = SystemPropertiesEditor(game_system,
                                      validator)
@@ -158,8 +159,6 @@ class GameSystemController(QtController):
             display_error(self.main_window,
                           "Cannot add duplicate game system with id `{}'".format(
                               e.game_system_id))
-
-
 
 
 class LoadCampaignTask(QRunnable):
