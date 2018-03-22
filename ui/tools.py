@@ -196,7 +196,7 @@ class NameGenController(QObject):
         self.current_gender = male
         self.view = None
 
-    def set_view(self, view):
+    def init_view(self, view):
         self.view = view
 
         view.form.name_groups.activated.connect(self.on_cb_activated)

@@ -170,7 +170,7 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
 
         dialog = NameGenDialog()
         con = self.namegenerator = NameGenController()
-        con.set_view(dialog)
+        con.init_view(dialog)
         self.namegen.triggered.connect(dialog.show)
 
     @pyqtSlot(Campaign)
