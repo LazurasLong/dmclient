@@ -81,8 +81,9 @@ class DiceRollerDialog(QDialog, Ui_ResultsDialog):
             grid.addWidget(die_button, i, 1)
             plus = QLabel(widget)
             plus.setTextFormat(Qt.RichText)
-            plus.setText(
-                '<html><head/><body><p><span style="font-size:12pt;">+</span></p></body></html>')
+            plus.setText('<html><head/><body><p>'
+                         '<span style="font-size:12pt;">+</span>'
+                         '</p></body></html>')
             grid.addWidget(plus, i, 2)
             modifier = QSpinBox(widget)
             modifier.setRange(-1024, 1024)
