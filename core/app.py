@@ -53,7 +53,11 @@ class GameSystemController(QtController):
         self.systems = SchemaTableModel(PropertiesSchema, GameSystem,
                                         readonly=True)
         self.cc = None
+        self.view = None
         self._last_path = {}
+
+    def bind(self, view):
+        self.view = view
 
     def add_from_archive(self, archive_meta):
         """
@@ -138,25 +142,25 @@ class GameSystemController(QtController):
     @pyqtSlot()
     def on_game_system_update(self, propdlg):
         game_system = propdlg.game_system
-        self.systems.add(game_system)
+        self.systems.append(game_system)
 
     @pyqtSlot()
     def on_add_gamesystem(self):
-        path = get_open_filename(self.main_window, "Import game archive",
+        path = get_open_filename(self.view, "Import game archive",
                                  filter_=filters.library,
                                  recent_key="import_game_archive")
         if not path:
             return
         try:
             meta = archive.open(path)
-            self.game_controller.add_from_archive(meta)
-            self.main_window.enable_create()
+            self.add_from_archive(meta)
+            self.view.enable_create()
         except (OSError, InvalidArchiveError) as e:
             log.error("failed to load game system: %s", e)
-            display_error(self.main_window,
+            display_error(self.view,
                           "The archive file could not be read.")
         except ExistingLibraryError as e:
-            display_error(self.main_window,
+            display_error(self.view,
                           "Cannot add duplicate game system with id `{}'".format(
                               e.game_system_id))
 
@@ -235,6 +239,7 @@ class AppController(QObject):
     def show_new_campaign(self):
         g = self.game_controller
         w = self.main_window = NewCampaignDialog(g.systems, {})
+        g.bind(w)
         w.accepted.connect(self.on_new_campaign)
         w.loadExistingCampaignRequested.connect(self.on_open_campaign)
         w.importGameSystem.triggered.connect(g.on_add_gamesystem)
