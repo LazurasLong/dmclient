@@ -4,6 +4,8 @@ from sqlalchemy.ext.declarative import declarative_base
 """The declarative base for all tables in the ``game`` schema."""
 GameBase = declarative_base()
 
+CampaignBase = declarative_base()
+
 
 class DescribableMixin:
     id = Column(Integer, primary_key=True)

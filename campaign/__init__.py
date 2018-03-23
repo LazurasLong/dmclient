@@ -17,12 +17,12 @@
 
 from datetime import datetime
 
-from sqlalchemy import String, Column, Integer
+from sqlalchemy import Column, Integer
 
-from model import GameBase, AssetMixin
+from model import CampaignBase, AssetMixin
 
 
-class Player(GameBase, AssetMixin):
+class Player(CampaignBase, AssetMixin):
     __tablename__ = "players"
 
     kills = Column(Integer)

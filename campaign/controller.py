@@ -30,7 +30,7 @@ from core import filters, archive
 from core.archive import ArchiveMeta
 from core.config import TMP_PATH
 from core.controller import QtController
-from model import GameBase
+from model import GameBase, CampaignBase
 from model.tree import FixedNode, TableNode, TreeModel, BadNode
 from ui import get_open_filename, display_error, get_save_filename, \
     display_warning
@@ -299,7 +299,9 @@ class CampaignController(QtController):
         campaign_db_path = self.database_path(campaign)
         self._engine = create_engine("sqlite:///{}".format(campaign_db_path), echo=True)
         self._Session = sessionmaker(bind=self._engine)
+
         GameBase.metadata.create_all(self._engine)
+        CampaignBase.metadata.create_all(self._engine)
 
         self.view = CampaignWindow(self.campaign)
         self.map_controller = None
@@ -467,4 +469,3 @@ class CampaignController(QtController):
             log.error("could not export campaign: %s", e)
         else:
             return path
-
