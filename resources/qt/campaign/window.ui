@@ -66,8 +66,6 @@
     <addaction name="save_campaign"/>
     <addaction name="save_campaign_as"/>
     <addaction name="separator"/>
-    <addaction name="close_campaign"/>
-    <addaction name="separator"/>
     <addaction name="import_rules"/>
     <addaction name="import_document"/>
     <addaction name="add_document"/>
