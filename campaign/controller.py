@@ -413,23 +413,28 @@ class CampaignController(QtController):
 
     @pyqtSlot()
     def on_sync_campaign(self):
+        log.debug("requested to sync campaign")
         am = self.archive_meta
         if not am:
             self._save_campaign_as()
             return
+        path = am.last_seen_path
         if am.last_seen_path and not os.path.exists(am.last_seen_path):
+            # TODO why do we do this? I forget the original use case.
             display_warning(self.view, "The campaign archive appears to have "
                                        "been moved or deleted.\n\nPlease "
                                        "select a new location to save this "
                                        "archive.")
-            am.last_seen_path = self._save_campaign_as()
-            return
-        raise NotImplementedError
+            path = self._save_campaign_as()
+            if not path:
+                return
+        self._sync_archive_meta(path)
+        archive.export(self.archive_meta,
+                       CampaignController.extracted_archive_path(self.campaign),
+                       am.last_seen_path)
 
     @pyqtSlot()
     def on_save_campaign_as(self):
-        # Do not update the "last seen" path,
-        # this is presumably for making a copy.
         self._save_campaign_as()
 
     @pyqtSlot()
@@ -453,15 +458,7 @@ class CampaignController(QtController):
         if not path:
             return
         try:
-            campaign = self.campaign
-            self.archive_meta = ArchiveMeta(campaign.id,
-                                            campaign.game_system.id,
-                                            campaign.name,
-                                            campaign.description,
-                                            campaign.author,
-                                            campaign.creation_date,
-                                            campaign.revision_date,
-                                            last_seen_path=path)
+            self._sync_archive_meta(path)
             archive.export(self.archive_meta,
                            CampaignController.extracted_archive_path(self.campaign),
                            path)
@@ -469,3 +466,14 @@ class CampaignController(QtController):
             log.error("could not export campaign: %s", e)
         else:
             return path
+
+    def _sync_archive_meta(self, path):
+        campaign = self.campaign
+        self.archive_meta = ArchiveMeta(campaign.id,
+                                        campaign.game_system.id,
+                                        campaign.name,
+                                        campaign.description,
+                                        campaign.author,
+                                        campaign.creation_date,
+                                        campaign.revision_date,
+                                        last_seen_path=path)
