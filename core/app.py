@@ -230,7 +230,7 @@ class AppController(QObject):
         self.cc = None
         self.thread_pool = QThreadPool()
         self.game_controller = GameSystemController()
-        self.main_window = None
+        self.view = None
         try:
             self.game_controller.load_config(self.game_config_path)
         except FileNotFoundError:
@@ -238,7 +238,7 @@ class AppController(QObject):
 
     def show_new_campaign(self):
         g = self.game_controller
-        w = self.main_window = NewCampaignDialog(g.systems, {})
+        w = self.view = NewCampaignDialog(g.systems, {})
         g.bind(w)
         w.accepted.connect(self.on_new_campaign)
         w.loadExistingCampaignRequested.connect(self.on_open_campaign)
@@ -248,13 +248,13 @@ class AppController(QObject):
         w.raise_()
 
     def load_campaign(self, path):
-        assert self.main_window is None
-        self.main_window = LoadingDialog(loading_text="Loading campaign...")
-        task = LoadCampaignTask(path, mtexec(self.main_window.update_progress),
+        assert self.view is None
+        self.view = LoadingDialog(loading_text="Loading campaign...")
+        task = LoadCampaignTask(path, mtexec(self.view.update_progress),
                                 self._on_campaign_loaded)
-        self.main_window.set_task(task)
-        self.main_window.raise_()
-        self.main_window.show()
+        self.view.set_task(task)
+        self.view.raise_()
+        self.view.show()
         QTimer.singleShot(0, lambda: self.thread_pool.start(task))
 
     def _on_campaign_loaded(self):
@@ -262,11 +262,11 @@ class AppController(QObject):
 
     @pyqtSlot()
     def on_campaign_loaded(self):
-        result = self.main_window.task.result
+        result = self.view.task.result
         if not result:
             log.exception("failed to load campaign: %s",
-                          self.main_window.task.exception)
-            display_error(self.main_window, "The campaign could not be loaded.")
+                          self.view.task.exception)
+            display_error(self.view, "The campaign could not be loaded.")
             self._clear_main_window()
             self.show_new_campaign()
             return
@@ -276,9 +276,9 @@ class AppController(QObject):
         self._init_cc(campaign, meta)
 
     def _clear_main_window(self):
-        self.main_window.hide()
-        self.main_window.destroy()
-        self.main_window = None
+        self.view.hide()
+        self.view.destroy()
+        self.view = None
 
     def _create_campaign(self, meta):
         game_system = self.game_controller.get(meta.game_system_id)
@@ -290,7 +290,7 @@ class AppController(QObject):
         return campaign
 
     def _init_cc(self, campaign, archive_meta=None):
-        assert self.main_window is None
+        assert self.view is None
         if self.args.disable_oracle:
             delphi = DummyDelphi()
         else:
@@ -301,7 +301,7 @@ class AppController(QObject):
 
         self.game_controller.cc = cc
 
-        window = self.main_window = cc.view
+        window = self.view = cc.view
         window.check_for_updates.triggered.connect(self.on_check_updates)
         window.game_system_properties.triggered.connect(
             self.game_controller.on_game_system_properties)
@@ -318,7 +318,7 @@ class AppController(QObject):
 
     def on_quit_requested(self):
         if self.game_controller.has_unsaved():
-            res = get_trial_response(self.main_window,
+            res = get_trial_response(self.view,
                                      "There are unsaved game system changes.\n"
                                      "\n"
                                      "Do you want to save these changes to disc?",
@@ -372,7 +372,7 @@ class AppController(QObject):
         """
         Called by the ``File`` menu or when the new campaign dialog is accepted.
         """
-        options = self.main_window.options
+        options = self.view.options
         self._clear_main_window()
 
         cid = generate_uuid()
@@ -392,7 +392,7 @@ class AppController(QObject):
         Called by the ``File`` menu and by the new campaign dialog's
         *open existing* button.
         """
-        path = get_open_filename(self.main_window, "Open campaign",
+        path = get_open_filename(self.view, "Open campaign",
                                  filter_=filters.campaign)
         if not path:
             return
@@ -403,7 +403,7 @@ class AppController(QObject):
 
     @pyqtSlot()
     def on_check_updates(self):
-        dlg = LoadingDialog(self.main_window,
+        dlg = LoadingDialog(self.view,
                             loading_text="Checking for updates...")
         dlg.raise_()
         dlg.show()
