@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with dmclient.  If not, see <http://www.gnu.org/licenses/>.
 #
+import enum
 import os
 
 from PyQt5.QtWidgets import *
@@ -49,7 +50,7 @@ def _qfiledialog(f, parent, title, dir_=None, filter_=filters.any,
     if recent_key and not dir_:
         try:
             path = appconfig().recent_dirs[recent_key]
-        except KeyError as e:
+        except KeyError:
             path = os.path.expanduser('~')
     else:
         path = dir_
@@ -96,7 +97,7 @@ def get_polar_response(parent, msg, affirmative, title="Question",
     :param dissenting: The text to show on the "No" button; "Cancel" by default.
     :return: ``True`` if the user selected the affirmative, ``False`` otherwise.
     """
-    assert affirmative != "", "Affirmative text must always be explicitly specified!"
+    assert affirmative != "", "affirmative text must be specified!"
     msgbox = QMessageBox(parent)
     msgbox.setWindowTitle(title)
     msgbox.setText(msg)
@@ -107,6 +108,46 @@ def get_polar_response(parent, msg, affirmative, title="Question",
     if msgbox.clickedButton() == affirmative_button:
         return True
     return False
+
+
+class TrialResponses(enum.Enum):
+    default = 0
+    alternative = 1
+    dissenting = 2
+
+
+# noinspection PyPep8Naming
+def get_trial_response(parent, msg, default, alternative="Discard",
+                       dissenting="Cancel", title="Question",):
+    """
+
+    :param parent: Parent window or dialog.
+    :param msg: The message to display.
+    :param default: The text to show on the button that is highlighted by
+                    default.
+    :param alternative: The alternative option to host. In terms of tab order,
+                        this option is second.
+    :param dissenting: The "cancel" option, or rather the one that should
+                       result in a "no-op" action.
+    :param title: The message box title.
+    :return:
+    """
+    assert default != "", "default text must be specified"
+    assert alternative != "", "alternative text must be specified"
+    msgbox = QMessageBox(parent)
+    msgbox.setWindowTitle(title)
+    msgbox.setText(msg)
+    msgbox.setIcon(QMessageBox.Question)
+    default_button = msgbox.addButton(default, QMessageBox.YesRole)
+    alternative_button = msgbox.addButton(alternative, QMessageBox.NoRole)
+    msgbox.addButton(dissenting, QMessageBox.RejectRole)
+    msgbox.exec_()
+    if msgbox.clickedButton() == default_button:
+        return TrialResponses.default
+    elif msgbox.clickedButton() == alternative_button:
+        return TrialResponses.alternative
+    else:
+        return TrialResponses.dissenting
 
 
 def spacer_widget(parent=None):

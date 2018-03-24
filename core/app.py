@@ -34,7 +34,7 @@ from game import GameSystem
 from model.qt import SchemaTableModel
 from oracle import DummyDelphi, Delphi
 from ui import display_error, get_open_filename, LoadingDialog, \
-    get_polar_response
+    get_polar_response, get_trial_response, TrialResponses
 from ui.campaign import NewCampaignDialog
 from ui.game.system import SystemPropertiesEditor, SystemIDValidator
 
@@ -352,14 +352,15 @@ class AppController(QObject):
 
     def on_quit_requested(self):
         if self.game_controller.has_unsaved():
-            res = get_polar_response(self.main_window,
+            res = get_trial_response(self.main_window,
                                      "There are unsaved game system changes.\n"
                                      "\n"
                                      "Do you want to save these changes to disc?",
-                                     "Save...", "Unsaved game systems")
-            if not res:
+                                     "Save...", title="Unsaved game systems")
+            if res == TrialResponses.dissenting:
                 return False
-            print("here is where I would export unused archives")
+            elif res == TrialResponses.default:
+                print("here is where I would export unused archives")
         self.qapp.quit()
         return True
 
