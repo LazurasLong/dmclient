@@ -247,40 +247,6 @@ class AppController(QObject):
         w.show()
         w.raise_()
 
-    @pyqtSlot()
-    def on_new_campaign(self):
-        """
-        Called by the ``File`` menu or when the new campaign dialog is accepted.
-        """
-        options = self.main_window.options
-        self._clear_main_window()
-
-        cid = generate_uuid()
-        game_system = self.game_controller.get(options["game_system"])
-        campaign = Campaign(cid, game_system)
-        for attr in ["name", "author"]:
-            option = options[attr]
-            if option:
-                setattr(campaign, attr, option)
-        os.mkdir(CampaignController.working_directory(campaign))
-        os.mkdir(CampaignController.extracted_archive_path(campaign))
-        self._init_cc(campaign)
-
-    @pyqtSlot()
-    def on_open_campaign(self):
-        """
-        Called by the ``File`` menu and by the new campaign dialog's
-        *open existing* button.
-        """
-        path = get_open_filename(self.main_window, "Open campaign",
-                                 filter_=filters.campaign)
-        if not path:
-            return
-        if self.cc:
-            self.cc.shutdown()
-        self._clear_main_window()
-        self.load_campaign(path)
-
     def load_campaign(self, path):
         assert self.main_window is None
         self.main_window = LoadingDialog(loading_text="Loading campaign...")
@@ -370,6 +336,11 @@ class AppController(QObject):
             return
         event.accept()
 
+    def delphi_quit(self, code):
+        if code == 0:
+            # SIGTERM, it's time to go.
+            self.qapp.quit()
+
     def shutdown(self):
         """
         Perform shutdown tasks. It is assumed at this point that save states
@@ -397,13 +368,43 @@ class AppController(QObject):
             shutil.rmtree(self.cc.working_directory(self.cc.campaign))
 
     @pyqtSlot()
+    def on_new_campaign(self):
+        """
+        Called by the ``File`` menu or when the new campaign dialog is accepted.
+        """
+        options = self.main_window.options
+        self._clear_main_window()
+
+        cid = generate_uuid()
+        game_system = self.game_controller.get(options["game_system"])
+        campaign = Campaign(cid, game_system)
+        for attr in ["name", "author"]:
+            option = options[attr]
+            if option:
+                setattr(campaign, attr, option)
+        os.mkdir(CampaignController.working_directory(campaign))
+        os.mkdir(CampaignController.extracted_archive_path(campaign))
+        self._init_cc(campaign)
+
+    @pyqtSlot()
+    def on_open_campaign(self):
+        """
+        Called by the ``File`` menu and by the new campaign dialog's
+        *open existing* button.
+        """
+        path = get_open_filename(self.main_window, "Open campaign",
+                                 filter_=filters.campaign)
+        if not path:
+            return
+        if self.cc:
+            self.cc.shutdown()
+        self._clear_main_window()
+        self.load_campaign(path)
+
+    @pyqtSlot()
     def on_check_updates(self):
         dlg = LoadingDialog(self.main_window,
                             loading_text="Checking for updates...")
         dlg.raise_()
         dlg.show()
 
-    def delphi_quit(self, code):
-        if code == 0:
-            # SIGTERM, it's time to go.
-            self.qapp.quit()
