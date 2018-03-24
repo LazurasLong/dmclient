@@ -61,7 +61,6 @@
     </property>
     <addaction name="new_campaign"/>
     <addaction name="open_campaign"/>
-    <addaction name="recent"/>
     <addaction name="separator"/>
     <addaction name="save_campaign"/>
     <addaction name="save_campaign_as"/>
