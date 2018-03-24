@@ -1,7 +1,6 @@
 import csv
 import os
 from logging import getLogger
-from uuid import UUID
 
 log = getLogger(__name__)
 
@@ -33,6 +32,7 @@ def writer(configfile):
 
 
 class GameSystemConfigWriter:
+    """A parser for the global game configuration file."""
     def __init__(self, csvwriter):
         self.csvwriter = csvwriter
 
