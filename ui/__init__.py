@@ -29,6 +29,12 @@ __all__ = [
     "display_warning",
     "LoadingWidget",
     "LoadingDialog",
+    "get_open_filename",
+    "get_save_filename",
+    "get_open_filenames",
+    "get_polar_response",
+    "TrialResponses",
+    "get_trial_response",
 ]
 
 
