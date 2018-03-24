@@ -29,7 +29,7 @@ from campaign.note import Note, InternalNote
 from core import filters, archive
 from core.archive import ArchiveMeta
 from core.config import TMP_PATH
-from core.controller import QtController
+from core.controller import QtViewController
 from model import GameBase, CampaignBase
 from model.tree import FixedNode, TableNode, TreeModel, BadNode
 from ui import get_open_filename, display_error, get_save_filename, \
@@ -43,11 +43,11 @@ from ui.search import SearchCompleter
 log = getLogger(__name__)
 
 
-class SearchController(QtController):
+class SearchController(QtViewController):
     """
     .. todo::
         Make this class more MVC-ish. It does too much. It'd be nice if it also
-        followed the general pattern of ``spawn_view()``.
+        followed the general pattern of ``bind(view)``.
 
     """
     def __init__(self, delphi, completer, interval_msec=250):
@@ -142,15 +142,17 @@ class SearchController(QtController):
             model.appendRow(section_item)
 
 
-class NoteController(QtController):
+class NoteController(QtViewController):
     def __init__(self, cc, parent=None):
+        super().__init__(parent)
         self._cc = cc
-        view = cc.view
-        super().__init__(parent, view)
         self.tree_node = TableNode(cc.db(), Note,
                                    icon=QIcon(":/icons/books.png"),
                                    text="Documents", delegate=self,
                                    item_action=self.item_doubleclicked)
+
+    def bind(self, view):
+        super().bind(view)
         view.import_document.triggered.connect(self.on_import_document)
         view.add_document.triggered.connect(self.on_add_document)
         view.remove_document.triggered.connect(self.on_remove_document)
@@ -232,11 +234,9 @@ class NoteController(QtController):
         raise NotImplementedError
 
 
-class MapController(QtController):
-    def __init__(self, cc, parent=None):
-        view = cc.view
-        super().__init__(parent, view)
-        self.campaign_window = view
+class MapController(QtViewController):
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.tree_node = FixedNode(icon=QIcon(":/icons/maps.png"), text="Maps",
                                    action=self.show_map)
         self.toolbar = None
@@ -252,21 +252,19 @@ class MapController(QtController):
 
     def spawn_view(self):
         # called by tab controller if need be
-        return RegionalMapView(map, ControlScheme(), self.campaign_window)
+        return RegionalMapView(map, ControlScheme(), self.view)
 
 
-class PlayerController(QtController):
+class PlayerController(QtViewController):
     def __init__(self, cc, parent=None):
-        view = cc.view
-        super().__init__(parent, view)
+        super().__init__(parent)
         self.tree_node = TableNode(cc.db(), Player, text="Players",
                                    icon=QIcon(":/icons/party.png"))
 
 
-class SessionController(QtController):
+class SessionController(QtViewController):
     def __init__(self, cc, parent=None):
-        view = cc.view
-        super().__init__(parent, view)
+        super().__init__(parent)
         icon = QIcon(":/icons/sessions.png")
         self.tree_node = BadNode(text="Campaign sessions")
         # self.tree_node = TableNode(CampaignSession,
@@ -276,7 +274,7 @@ class SessionController(QtController):
         pass
 
 
-class CampaignController(QtController):
+class CampaignController(QtViewController):
     """
     A ``CampaignController`` is the controller for a campaign during the
     lifetime of an application. To keep this class small, it is mostly
@@ -357,9 +355,14 @@ class CampaignController(QtController):
         self.player_controller = PlayerController(self)
         self.note_controller = NoteController(self)
         self.session_controller = SessionController(self)
-
         self.search_controller = SearchController(self.delphi,
                                                   SearchCompleter())
+        for controller in self._subcontrollers():
+            controller.bind(self.view)
+
+    def _subcontrollers(self):
+        return [self.map_controller, self.session_controller,
+                self.player_controller, self.note_controller]
 
     def _init_view(self):
         sc = self.search_controller
@@ -381,8 +384,7 @@ class CampaignController(QtController):
 
     def build_asset_tree(self):
         root = FixedNode(*[controller.tree_node for controller in
-                           [self.map_controller, self.session_controller,
-                            self.player_controller, self.note_controller]])
+                           self._subcontrollers()])
         return root
 
     def window_moved(self):

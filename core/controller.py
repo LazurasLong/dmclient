@@ -22,9 +22,12 @@ Qt controller ABCs.
 from PyQt5.QtCore import QObject
 
 
-class QtController(QObject):
-    def __init__(self, view=None, parent=None):
+class QtViewController(QObject):
+    def __init__(self, parent=None):
         super().__init__(parent)
+        self.view = None
+
+    def bind(self, view):
         self.view = view
 
     def has_unsaved(self):

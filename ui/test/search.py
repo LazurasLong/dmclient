@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QAction
 from PyQt5.QtWidgets import QDialog
 from PyQt5.QtWidgets import QDialogButtonBox
 
-from campaign.controller import SearchController
+from campaign.controller import SearchViewController
 from core.config import APP_NAME, CONFIG_PATH
 from dmclient import init_logging
 from oracle import DummyDelphi, spawn_oracle
@@ -57,7 +57,7 @@ def guitest_main(main_window):
     edit = SearchQueryEdit()
     fake_oracle = DummyDelphi()
     global controller
-    controller = SearchController(fake_oracle, edit.completer())
+    controller = SearchViewController(fake_oracle, edit.completer())
     edit.textChanged.connect(controller.on_search_text_changed)
 
     toolbar = main_window.addToolBar("Toolbar")

@@ -30,7 +30,7 @@ from campaign.controller import CampaignController
 from core import filters, generate_uuid, archive
 from core.archive import PropertiesSchema, InvalidArchiveError, ArchiveMeta
 from core.async import mtexec
-from core.controller import QtController
+from core.controller import QtViewController
 from game import GameSystem
 from model.qt import SchemaTableModel
 from oracle import DummyDelphi, Delphi
@@ -48,7 +48,7 @@ class ExistingLibraryError(Exception):
         self.game_system_id = game_system_id
 
 
-class GameSystemController(QtController):
+class GameSystemViewController(QtViewController):
     gameSystemAdded = pyqtSignal()
     gameSystemDenied = pyqtSignal()  # FIXME better name
 
@@ -236,7 +236,7 @@ class AppController(QObject):
         self.oracle_zygote = oracle_zygote
         self.cc = None
         self.thread_pool = QThreadPool()
-        self.game_controller = GameSystemController()
+        self.game_controller = GameSystemViewController()
         self.game_controller.gameSystemAdded.connect(self.on_gamesystem_added)
         self.game_controller.gameSystemDenied.connect(self.on_gamesystem_denied)
         self.view = None
