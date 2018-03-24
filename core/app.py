@@ -20,7 +20,8 @@ import shutil
 from datetime import datetime
 from logging import getLogger
 
-from PyQt5.QtCore import QTimer, pyqtSlot, QRunnable, QThreadPool, QObject
+from PyQt5.QtCore import QTimer, pyqtSlot, QRunnable, QThreadPool, QObject, \
+    pyqtSignal
 
 import core.config
 import game.config
@@ -34,7 +35,7 @@ from game import GameSystem
 from model.qt import SchemaTableModel
 from oracle import DummyDelphi, Delphi
 from ui import display_error, get_open_filename, LoadingDialog, \
-    get_polar_response, get_trial_response, TrialResponses
+    get_trial_response, TrialResponses, display_warning, get_polar_response
 from ui.campaign import NewCampaignDialog
 from ui.game.system import SystemPropertiesEditor, SystemIDValidator
 
@@ -48,6 +49,9 @@ class ExistingLibraryError(Exception):
 
 
 class GameSystemController(QtController):
+    gameSystemAdded = pyqtSignal()
+    gameSystemDenied = pyqtSignal()  # FIXME better name
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.systems = SchemaTableModel(PropertiesSchema, GameSystem,
@@ -131,7 +135,7 @@ class GameSystemController(QtController):
         if self.cc:
             game_system = self.cc.campaign.game_system
         else:
-            # FIXME
+            # FIXME hack
             game_system = GameSystem.default()
         validator = SystemIDValidator(self.systems)
         dlg = SystemPropertiesEditor(game_system,
@@ -142,7 +146,11 @@ class GameSystemController(QtController):
     @pyqtSlot()
     def on_game_system_update(self, propdlg):
         game_system = propdlg.game_system
+        # FIXME hack
+        is_new_system = game_system.id not in self.systems
         self.systems.append(game_system)
+        if is_new_system:
+            self.gameSystemAdded.emit()
 
     @pyqtSlot()
     def on_add_gamesystem(self):
@@ -150,11 +158,12 @@ class GameSystemController(QtController):
                                  filter_=filters.library,
                                  recent_key="import_game_archive")
         if not path:
+            self.gameSystemDenied.emit()
             return
         try:
             meta = archive.open(path)
             self.add_from_archive(meta)
-            self.view.enable_create()
+            self.gameSystemAdded.emit()
         except (OSError, InvalidArchiveError) as e:
             log.error("failed to load game system: %s", e)
             display_error(self.view,
@@ -165,7 +174,7 @@ class GameSystemController(QtController):
                               e.game_system_id))
 
 
-class LoadCampaignTask(QRunnable):
+class ExtractCampaignTask(QRunnable):
     """
     This is sort of like a future, in that it has a ``result``.
     """
@@ -219,9 +228,7 @@ class AppController(QObject):
 
     def __init__(self, args, qapp, oracle_zygote):
         """
-
         :param qapp: A ``QApplication`` instance (avoids global var shenanigans)
-        :param delphi:
         """
         super().__init__(qapp)
         self.args = args
@@ -230,11 +237,18 @@ class AppController(QObject):
         self.cc = None
         self.thread_pool = QThreadPool()
         self.game_controller = GameSystemController()
+        self.game_controller.gameSystemAdded.connect(self.on_gamesystem_added)
+        self.game_controller.gameSystemDenied.connect(self.on_gamesystem_denied)
         self.view = None
         try:
             self.game_controller.load_config(self.game_config_path)
         except FileNotFoundError:
             pass
+
+    @property
+    def is_loading_campaign(self):
+        assert self.view is not None
+        return isinstance(self.view, LoadingDialog)
 
     def show_new_campaign(self):
         g = self.game_controller
@@ -250,29 +264,73 @@ class AppController(QObject):
     def load_campaign(self, path):
         assert self.view is None
         self.view = LoadingDialog(loading_text="Loading campaign...")
-        task = LoadCampaignTask(path, mtexec(self.view.update_progress),
-                                self._on_campaign_loaded)
+        task = ExtractCampaignTask(path, mtexec(self.view.update_progress),
+                                   # FIXME: Why not mtexec? Just hangs...
+                                   self._on_campaign_extracted)
         self.view.set_task(task)
         self.view.raise_()
         self.view.show()
         QTimer.singleShot(0, lambda: self.thread_pool.start(task))
 
-    def _on_campaign_loaded(self):
-        QTimer.singleShot(0, self.on_campaign_loaded)
+    def _on_campaign_extracted(self):
+        QTimer.singleShot(0, self.on_campaign_extracted)
 
     @pyqtSlot()
-    def on_campaign_loaded(self):
+    def on_gamesystem_added(self):
+        if self.is_loading_campaign:
+            # FIXME some duplication from on_campaign_extracted
+            result = self.view.task.result
+            meta, campaign_path = result
+            game_system_id = meta.game_system_id
+            game_system = self.game_controller.get(game_system_id)
+            self.on_campaign_readied(meta, game_system)
+        else:
+            # We are in the middle of the New Campaign dialog.
+            assert isinstance(self.view, NewCampaignDialog)
+            self.view.enable_create()
+
+    @pyqtSlot()
+    def on_gamesystem_denied(self):
+        if self.is_loading_campaign:
+            # FIXME some duplication from on_campaign_extracted
+            self._clear_main_window()
+            self.show_new_campaign()
+            return
+        assert isinstance(self.view, NewCampaignDialog)
+
+    @pyqtSlot()
+    def on_campaign_extracted(self):
         result = self.view.task.result
         if not result:
-            log.exception("failed to load campaign: %s",
+            log.exception("failed to extract campaign: %s",
                           self.view.task.exception)
             display_error(self.view, "The campaign could not be loaded.")
             self._clear_main_window()
             self.show_new_campaign()
             return
         meta, campaign_path = result
+        game_system_id = meta.game_system_id
+        try:
+            game_system = self.game_controller.get(game_system_id)
+            self.on_campaign_readied(meta, game_system)
+        except KeyError:
+            res = get_polar_response(self.view, "The game system `{}' has "
+                                                "not been loaded yet.\n\nWould "
+                                                "you like to do so?"
+                                     .format(game_system_id),
+                                     affirmative="Load system...",
+                                     title="Game system not found")
+            if not res:
+                self._clear_main_window()
+                self.show_new_campaign()
+                return
+            self.game_controller.on_add_gamesystem()
+
+    @pyqtSlot()
+    def on_campaign_readied(self, meta, game_system):
+        """The final step! The game system has been verified, all systems go."""
         self._clear_main_window()
-        campaign = self._create_campaign(meta)
+        campaign = self._create_campaign(meta, game_system)
         self._init_cc(campaign, meta)
 
     def _clear_main_window(self):
@@ -280,8 +338,7 @@ class AppController(QObject):
         self.view.destroy()
         self.view = None
 
-    def _create_campaign(self, meta):
-        game_system = self.game_controller.get(meta.game_system_id)
+    def _create_campaign(self, meta, game_system):
         campaign = Campaign(meta.id, game_system)
         campaign.name = meta.name
         campaign.author = meta.author
