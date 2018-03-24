@@ -128,7 +128,7 @@ class GameSystemController(QtController):
         raise KeyError
 
     def has_unsaved(self):
-        return True
+        return not all(system.id in self._last_path for system in self.systems)
 
     @pyqtSlot()
     def on_game_system_properties(self):
