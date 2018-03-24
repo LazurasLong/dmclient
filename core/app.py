@@ -342,6 +342,7 @@ class AppController(QObject):
         campaign = Campaign(meta.id, game_system)
         campaign.name = meta.name
         campaign.author = meta.author
+        campaign.description = meta.description
         campaign.creation_date = meta.creation_date
         campaign.revision_date = datetime.now()
         return campaign
