@@ -19,8 +19,6 @@
 Document management. Roleplaying games tend to involve a lot of notetaking,
 in a variety of formats such as plain-text, PDF, or DOCX.
 """
-import os
-from datetime import datetime
 from urllib.parse import urlparse
 
 from sqlalchemy import Column, String, ForeignKey, Integer
@@ -51,5 +49,6 @@ class InternalNote(GameBase):
     __tablename__ = "internal_note"
 
     id = Column(Integer, primary_key=True)
+    name = Column(String, default="Untitled note")
     note_id = Column(Integer, ForeignKey('note.id'))
     text = Column(String)

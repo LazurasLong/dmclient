@@ -360,10 +360,6 @@ class CampaignController(QtViewController):
         for controller in self._subcontrollers():
             controller.bind(self.view)
 
-    def _subcontrollers(self):
-        return [self.map_controller, self.session_controller,
-                self.player_controller, self.note_controller]
-
     def _init_view(self):
         sc = self.search_controller
         v = self.view
@@ -468,6 +464,10 @@ class CampaignController(QtViewController):
             log.error("could not export campaign: %s", e)
         else:
             return path
+
+    def _subcontrollers(self):
+        return [self.map_controller, self.session_controller,
+                self.player_controller, self.note_controller]
 
     def _sync_archive_meta(self, path):
         campaign = self.campaign
