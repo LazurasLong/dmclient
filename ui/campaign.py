@@ -21,25 +21,21 @@ import webbrowser
 from datetime import datetime
 from logging import getLogger
 
-from PyQt5.QtCore import Qt, pyqtSlot
+from PyQt5.QtCore import Qt, pyqtSlot, QObject
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIcon, QCloseEvent
 from PyQt5.QtWidgets import *
 
-from campaign import Campaign, CampaignSession
+from campaign import Campaign
 from campaign.battlemap import Map
 from core import filters
 from core.archive import InvalidArchiveError
 from core.config import APP_NAME, BUG_URL, DONATE_URL
-from model.qt import SchemaTableModel
-from model.schema import SessionPropertiesSchema
-from ui import display_error, get_open_filename, ResourceDialogManager, \
-    spacer_widget
+from ui import display_error, get_open_filename, spacer_widget
 from ui.about import show as show_about
 from ui.archive import ArchiveDialog
 from ui.preferences import show_preferences
-from ui.tools import DiceController as DiceController, DiceRollerDialog, \
-    QObject, NameGenController, NameGenDialog
+from ui.tools import DiceRollerDialog, NameGenDialog
 from ui.widgets.campaign.new import Ui_NewCampaignDialog
 from ui.widgets.campaign.properties import Ui_CampaignProperties
 from ui.widgets.campaign.session import Ui_CampaignSession
@@ -53,19 +49,18 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
     windowMoved = pyqtSignal()
     windowResized = pyqtSignal()
 
-    def __init__(self, campaign):
+    def __init__(self):
         QMainWindow.__init__(self)
         self.setupUi(self)
         self.remove_document.setIcon(QIcon.fromTheme("edit-delete"))
         self.statusbar.showMessage("Welcome to %s" % APP_NAME)
-        self.setWindowTitle(campaign.name)
 
         self.tab_controller = TabController(self.tabWidget)
         self._init_asset_tree()
-        self._init_session_list(campaign)
+        self._init_session_list()
         self._init_map_components()
         self._init_search_widgets()
-        self._init_tools(campaign)
+        self._init_tools()
 
         # FIXME this seems to do a subprocess thing. We don't want their stderr!
         self.digitalbusking.triggered.connect(lambda: webbrowser.open(DONATE_URL))
@@ -99,7 +94,7 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
 
         tb.addWidget = hacky_stopper
 
-    def _init_session_list(self, campaign):
+    def _init_session_list(self):
         dock = QDockWidget(self)
         self.sessionList = QListView(dock)
 
@@ -110,13 +105,13 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
         dock.setWindowTitle("Sessions")
         self.addDockWidget(Qt.LeftDockWidgetArea, dock)
 
-        session_model = SchemaTableModel(SessionPropertiesSchema,
-                                         CampaignSession,
-                                         data=campaign.sessions)
-        session_model.readonly = True
-        self.sessionList.setModel(session_model)
-        self.sessionListManager = ResourceDialogManager(session_model, CampaignSessionDialog, self)
-        self.sessionList.doubleClicked.connect(self.sessionListManager.on_show)
+        # session_model = SchemaTableModel(SessionPropertiesSchema,
+        #                                  CampaignSession,
+        #                                  data=campaign.sessions)
+        # session_model.readonly = True
+        # self.sessionList.setModel(session_model)
+        # self.sessionListManager = ResourceDialogManager(session_model, CampaignSessionDialog, self)
+        # self.sessionList.doubleClicked.connect(self.sessionListManager.on_show)
 
     def _init_map_components(self):
         dock = QDockWidget(self)
@@ -134,6 +129,13 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
         # dock = MapLayerPropertiesDock(self.map_scene.layers, self)
         # dock.layer_table.doubleClicked.connect(self._map_layers_dlg.on_showedit)
         self.addDockWidget(Qt.RightDockWidgetArea, dock)
+
+    def _init_tools(self):
+        self.dice_roller = DiceRollerDialog()
+        self.roller.triggered.connect(self.dice_roller.show)
+
+        self.namegen_dialog = NameGenDialog()
+        self.namegen.triggered.connect(self.namegen_dialog.show)
 
     def closeEvent(self, event):
         self.closeRequested.emit(event)
@@ -159,19 +161,6 @@ class CampaignWindow(QMainWindow, Ui_MainWindow):
     @pyqtSlot()
     def on_edit_preferences_triggered(self):
         show_preferences(parent=self)
-
-    @pyqtSlot()
-    def _init_tools(self, campaign):
-        # FIXME: decide on this crap already...
-
-        controller = DiceController(campaign.dice)
-        self.dice_roller = DiceRollerDialog(controller)
-        self.roller.triggered.connect(self.dice_roller.show)
-
-        dialog = NameGenDialog()
-        con = self.namegenerator = NameGenController()
-        con.init_view(dialog)
-        self.namegen.triggered.connect(dialog.show)
 
     @pyqtSlot(Campaign)
     def on_properties_change(self, campaign):

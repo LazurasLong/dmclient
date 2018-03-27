@@ -36,7 +36,7 @@ from model.qt import SchemaTableModel
 from oracle import DummyDelphi, Delphi
 from ui import display_error, get_open_filename, LoadingDialog, \
     get_trial_response, TrialResponses, display_warning, get_polar_response
-from ui.campaign import NewCampaignDialog
+from ui.campaign import NewCampaignDialog, CampaignWindow
 from ui.game.system import SystemPropertiesEditor, SystemIDValidator
 
 log = getLogger(__name__)
@@ -59,9 +59,6 @@ class GameSystemViewController(QtViewController):
         self.cc = None
         self.view = None
         self._last_path = {}
-
-    def bind(self, view):
-        self.view = view
 
     def add_from_archive(self, archive_meta):
         """
@@ -223,7 +220,7 @@ def shutdown_method(f):
     return wrapped
 
 
-class AppController(QObject):
+class AppController(QtViewController):
     game_config_path = os.path.join(core.config.CONFIG_PATH, "gamesystems")
 
     def __init__(self, args, qapp, oracle_zygote):
@@ -239,11 +236,19 @@ class AppController(QObject):
         self.game_controller = GameSystemViewController()
         self.game_controller.gameSystemAdded.connect(self.on_gamesystem_added)
         self.game_controller.gameSystemDenied.connect(self.on_gamesystem_denied)
-        self.view = None
         try:
             self.game_controller.load_config(self.game_config_path)
         except FileNotFoundError:
             pass
+
+    def bind(self, view):
+        super().bind(view)
+        view.check_for_updates.triggered.connect(self.on_check_updates)
+        view.game_system_properties.triggered.connect(
+            self.game_controller.on_game_system_properties)
+        view.open_campaign.triggered.connect(self.on_open_campaign)
+        view.quit.triggered.connect(self.on_quit_requested)
+        view.closeRequested.connect(self.on_quit_requested_event)
 
     @property
     def is_loading_campaign(self):
@@ -354,18 +359,19 @@ class AppController(QObject):
         else:
             delphi = Delphi(self.oracle_zygote, self.delphi_quit)
 
+        window = CampaignWindow()
+        window.setWindowTitle(campaign.name)
+        self.bind(window)
+
         # TODO: Ensure that the previous campaign was flushed out (i.e., tmp)
         cc = self.cc = CampaignController(delphi, campaign, archive_meta)
+        self.game_controller.cc = cc
+        cc.init_subcontrollers()
+        cc.init_asset_tree()
+        cc.bind(window)
 
         self.game_controller.cc = cc
-
-        window = self.view = cc.view
-        window.check_for_updates.triggered.connect(self.on_check_updates)
-        window.game_system_properties.triggered.connect(
-            self.game_controller.on_game_system_properties)
-        window.open_campaign.triggered.connect(self.on_open_campaign)
-        window.quit.triggered.connect(self.on_quit_requested)
-        window.closeRequested.connect(self.on_quit_requested_event)
+        self.game_controller.bind(window)
 
         delphi.start(CampaignController.database_path(campaign),
                      CampaignController.xapian_database_path(campaign),
