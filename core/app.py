@@ -29,7 +29,7 @@ from campaign import Campaign
 from campaign.controller import CampaignController
 from core import filters, generate_uuid, archive
 from core.archive import PropertiesSchema, InvalidArchiveError, ArchiveMeta
-from core.async import mtexec
+from core.async import mtexec, ProgressRunnable
 from core.controller import QtViewController
 from game import GameSystem
 from model.qt import SchemaTableModel
@@ -171,34 +171,23 @@ class GameSystemViewController(QtViewController):
                               e.game_system_id))
 
 
-class ExtractCampaignTask(QRunnable):
-    """
-    This is sort of like a future, in that it has a ``result``.
-    """
-
-    def __init__(self, archive_path, cb, done_cb):
-        super().__init__()
+class ExtractCampaignTask(ProgressRunnable):
+    def __init__(self, archive_path, pcb, done_cb):
+        super().__init__(pcb, done_cb)
         self.archive_path = archive_path
-        self.cb = cb
-        self.done_cb = done_cb
-        self.result = None
-        self.exception = None
 
-    @pyqtSlot()
-    def run(self):
-        try:
-            self.cb(5)
-            meta = archive.open(self.archive_path)
-            self.cb(15)
-            destination = CampaignController.extracted_archive_path(meta)
-            archive.unpack(meta, destination)
-            self.cb(80)
-            self.result = meta, destination
-        except Exception as e:
-            self.exception = e
-        else:
-            core.config.appconfig().last_campaign_path = self.archive_path
-        self.done_cb()
+    def _run(self):
+        self.pcb(5)
+        meta = archive.open(self.archive_path)
+        self.pcb(15)
+        destination = CampaignController.extracted_archive_path(meta)
+        archive.unpack(meta, destination)
+        self.pcb(80)
+        self.result = meta, destination
+
+    def done(self):
+        core.config.appconfig().last_campaign_path = self.archive_path
+        super().done()
 
 
 def shutdown_method(f):
@@ -277,7 +266,7 @@ class AppController(QtViewController):
         self.view.show()
         QTimer.singleShot(0, lambda: self.thread_pool.start(task))
 
-    def _on_campaign_extracted(self):
+    def _on_campaign_extracted(self, runnable):
         QTimer.singleShot(0, self.on_campaign_extracted)
 
     @pyqtSlot()

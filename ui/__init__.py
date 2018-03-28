@@ -242,5 +242,5 @@ class LoadingDialog(QDialog):
         self.task = task
         self.update_progress(0)
 
-    def update_progress(self, percent):
-        self.widget.update_progress(percent)
+    def update_progress(self, percent, msg=None):
+        self.widget.update_progress(percent, msg)
