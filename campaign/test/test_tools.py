@@ -3,7 +3,7 @@ import random
 
 import pytest
 
-from ui.tools import NameGenParser
+from campaign.tools import NameGenParser
 
 
 @pytest.fixture

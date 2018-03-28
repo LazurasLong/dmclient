@@ -27,4 +27,5 @@ class DateMixin:
 
 
 class AssetMixin(DescribableMixin, DateMixin):  # TODO better name
+    """A combination of DescribeableMixin and DateMixin."""
     pass

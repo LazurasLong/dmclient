@@ -24,7 +24,7 @@ from PyQt5.QtWidgets import QMenu
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from campaign import Player
+from campaign import Player, CampaignSession
 from campaign.note import Note, InternalNote
 from campaign.tools import NameGenController, DiceController
 from core import filters, archive
@@ -37,7 +37,7 @@ from ui import get_open_filename, display_error, get_save_filename, \
     display_warning
 from ui.battlemap.controls import ControlScheme
 from ui.battlemap.widgets import RegionalMapView
-from ui.campaign import CampaignPropertiesDialog, CampaignWindow
+from ui.campaign import CampaignPropertiesDialog
 from ui.note import NoteEditorDialog
 from ui.search import SearchCompleter
 
@@ -271,9 +271,12 @@ class SessionController(QtViewController):
     def __init__(self, cc, parent=None):
         super().__init__(parent)
         icon = QIcon(":/icons/sessions.png")
-        self.tree_node = BadNode(text="Campaign sessions")
-        # self.tree_node = TableNode(CampaignSession,
-        #                            cc.db(), icon=icon, text="Sessions")
+        self.tree_node = TableNode(cc.db(),
+                                   CampaignSession, icon=icon, text="Sessions",
+                                   delegate=self)
+
+    def context_menu(self):
+        return [self.view.new_session]
 
     def show_session(self):
         pass
@@ -400,7 +403,7 @@ class CampaignController(QtViewController):
             return
         controller = node.delegate
         if not controller:
-            log.debug("There is no controller on this node.")
+            log.debug("There is no controller delegate on this node.")
             return
         context_menu = CampaignController.build_context_menu(
             controller.context_menu(),

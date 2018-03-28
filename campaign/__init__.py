@@ -17,15 +17,28 @@
 
 from datetime import datetime
 
-from sqlalchemy import Column, Integer
+from sqlalchemy import Column, Integer, DateTime, String
 
-from model import CampaignBase, AssetMixin
+from model import CampaignBase, AssetMixin, DescribableMixin
 
 
 class Player(CampaignBase, AssetMixin):
-    __tablename__ = "players"
+    __tablename__ = "player"
 
     kills = Column(Integer)
+
+
+class CampaignSession(CampaignBase, DescribableMixin):
+    __tablename__ = "session"
+
+    start_time = Column(DateTime)
+    end_time = Column(DateTime)
+    log = Column(String)
+
+    # notes, attendees
+
+    def __str__(self):
+        return str(self.start_time)
 
 
 class Campaign:
@@ -44,25 +57,7 @@ class Campaign:
         self.creation_date = datetime.now()
         self.revision_date = datetime.now()
         self.players = {}
-        self.sessions = []
         self.documents = []
         self.encounters = []
         self.regional_maps = {}
         self.encounter_maps = {}
-        self.notes = []
-
-
-class CampaignSession:
-    def __init__(self, timestamp=None, log=""):
-        if timestamp is None:
-            timestamp = datetime.now()
-        self.start_time = timestamp
-        self.end_time = timestamp
-        self.log = log
-        self.attendees = set()
-        self.notes = {}
-        self.recording = None
-
-    def __str__(self):
-        return str(self.start_time)
-
