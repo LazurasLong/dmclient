@@ -15,10 +15,6 @@
 # along with dmclient.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-# TODO: rename this ("battlemap" vs "schemamap"? Ugh.)
-# TODO: document the ideas and 4 functions behind this
-# TODO: support for marshmallow's field.Field(attribute) parameter
-
 from logging import getLogger
 
 from PyQt5.QtCore import QAbstractItemModel
@@ -29,9 +25,18 @@ from marshmallow import fields
 log = getLogger(__name__)
 
 
+marshmallow2qwidget = {
+    fields.String:          (QLineEdit, QPlainTextEdit, QLabel),
+    fields.FormattedString: QLineEdit,
+    fields.Boolean:         QCheckBox,
+    fields.Integer:         QSpinBox,
+    fields.Float:           QSpinBox,
+    fields.DateTime:        QLabel,
+}
+
+
 def schema_ui_map(schema, model, form):
     """Construct a QDataWidgetMapper from the given ``schema`` class.
-    (Function 4)
 
     :param schema: The schema to create field-to-widget mappings from.
     :param model: The model that the QDataWidgetMapper observes.
@@ -65,25 +70,14 @@ def schema_ui_map(schema, model, form):
 
 
 def _widget_type(fieldtype):
-    # TODO: document externally the name requirements
-    # TODO: allow additional flexibility in widget possibilities!
     # TODO: readonly -> qlabel?
-    qcls = {
-        fields.String:          (QLineEdit, QPlainTextEdit, QLabel),
-        fields.FormattedString: QLineEdit,
-        fields.Boolean:         QCheckBox,
-        fields.Integer:         QSpinBox,
-        fields.Float:           QSpinBox,
-        fields.DateTime:        QLabel,
-    }
-
     if fieldtype == fields.Nested:
         raise ValueError("I don't know what to do!")
-
-    return qcls[fieldtype]
+    return marshmallow2qwidget[fieldtype]
 
 
 def _widget_property(widget_type):
+    # TODO: Why aren't we just using the USER property?!
     return {QPlainTextEdit: "plainText",
             QLabel:         "text",
             QLineEdit:      "text",
