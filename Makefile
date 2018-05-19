@@ -179,7 +179,7 @@ ui/widgets/%_rc.py: resources/%.qrc
 
 # FIXME: cmd?
 ui/widgets/%/:
-	mkdir $@ ;           \
+	mkdir -p $@ ;           \
 	touch $@/__init__.py
 
 # FIXME these should not be FORCE.
