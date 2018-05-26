@@ -1,9 +1,19 @@
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 
-"""The declarative base for all tables in the ``game`` schema."""
+"""
+The declarative base class for all tables in the ``game`` namespace.
+
+This pertains primarily to the game system libraries, anything in a .DML file.
+"""
 GameBase = declarative_base()
 
+"""
+The declarative base for all tables in the ``campaign`` namespace.
+
+This includes anything that would be added to the database in a campaign
+archive.
+"""
 CampaignBase = declarative_base()
 
 
@@ -15,6 +25,9 @@ class DescribableMixin:
     def __init__(self, name, description):
         self.name = name
         self.description = description
+
+    def __str__(self):
+        return self.name
 
 
 class DateMixin:

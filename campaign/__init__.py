@@ -19,10 +19,10 @@ from datetime import datetime
 
 from sqlalchemy import Column, Integer, DateTime, String
 
-from model import CampaignBase, AssetMixin, DescribableMixin
+from model import CampaignBase, DescribableMixin
 
 
-class Player(CampaignBase, AssetMixin):
+class Player(CampaignBase, DescribableMixin):
     __tablename__ = "player"
 
     kills = Column(Integer)

@@ -81,7 +81,6 @@ from logging import getLogger
 from PyQt5.QtCore import QAbstractItemModel, QModelIndex, QVariant, Qt, pyqtSlot
 
 from model.qt import DMRole
-from model.schema import Schema
 
 __all__ = ["TreeNode", "FixedNode", "TableNode", "TreeModel"]
 
@@ -163,7 +162,7 @@ class TableNode(TreeNode):
     A tree node class suitable for displaying a database table.
     """
 
-    def __init__(self, db, schema: Schema, *cols, **kwargs):
+    def __init__(self, db, schema, *cols, **kwargs):
         """
 
         :param db: Database session.

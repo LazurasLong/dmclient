@@ -20,11 +20,12 @@ from logging import getLogger
 
 from PyQt5.QtCore import QTimer, pyqtSlot, QPoint
 from PyQt5.QtGui import QIcon, QStandardItem
-from PyQt5.QtWidgets import QMenu
+from PyQt5.QtWidgets import QMenu, QAction
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from campaign import Player, CampaignSession
+from campaign import CampaignSession
+from campaign import Player
 from campaign.note import Note, InternalNote
 from campaign.tools import NameGenController, DiceController
 from core import filters, archive
@@ -32,13 +33,15 @@ from core.archive import ArchiveMeta
 from core.config import TMP_PATH
 from core.controller import QtViewController
 from model import GameBase, CampaignBase
-from model.tree import FixedNode, TableNode, TreeModel, BadNode, TreeNode
+from model.tree import FixedNode, TableNode, TreeModel
+from model.tree import TreeNode
 from ui import get_open_filename, display_error, get_save_filename, \
     display_warning
 from ui.battlemap.controls import ControlScheme
 from ui.battlemap.widgets import RegionalMapView
 from ui.campaign import CampaignPropertiesDialog
 from ui.note import NoteEditorDialog
+from ui.player import NewPlayerDialog
 from ui.search import SearchCompleter
 
 log = getLogger(__name__)
@@ -261,10 +264,28 @@ class MapController(QtViewController):
 
 
 class PlayerController(QtViewController):
-    def __init__(self, cc, parent=None):
+    def __init__(self, db, parent=None):
         super().__init__(parent)
-        self.tree_node = TableNode(cc.db(), Player, text="Players",
-                                   icon=QIcon(":/icons/party.png"))
+        self.db = db
+        self.tree_node = TableNode(db, Player, text="Players",
+                                   icon=QIcon(":/icons/party.png"),
+                                   delegate=self)
+        add_player = QAction("Add player", parent)
+        add_player.triggered.connect(self.add_player)
+        self.actions = [add_player]
+
+    def context_menu(self):
+        return self.actions
+
+    def add_player(self):
+        dlg = NewPlayerDialog(self.parent().view)
+        dlg.playerAccepted.connect(self.player_accepted)
+        dlg.show()
+
+    @pyqtSlot(Player)
+    def player_accepted(self, player):
+        self.db.add(player)
+        self.tree_node.update()
 
 
 class SessionController(QtViewController):
@@ -355,7 +376,7 @@ class CampaignController(QtViewController):
 
     def init_subcontrollers(self):
         self.map_controller = MapController(self)
-        self.player_controller = PlayerController(self)
+        self.player_controller = PlayerController(self.db(), self)
         self.note_controller = NoteController(self)
         self.session_controller = SessionController(self)
         self.search_controller = SearchController(self.delphi,

@@ -32,3 +32,9 @@ class QtViewController(QObject):
 
     def has_unsaved(self):
         return False
+
+    def context_menu(self):
+        pass
+
+    def item_context_menu(self):
+        pass
